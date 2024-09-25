@@ -35,6 +35,21 @@ void execute(int instruction, long long registers[], char memory[], int& pc) {
                 break;
         }
     }
+    else if (opcodes[opcode] == "l") {
+        int rd = (instruction>>7)&0b11111;
+        int rs1 = (instruction>>15)&0b11111;
+        int imm = (instruction>>20)&0b111111111;
+        int funct3 = (instruction>>12)&0b111;
+        switch (funct3) {
+            case 0x0: // lb case.
+                registers[rd] = memory[registers[rs1]+imm];
+                break;
+                case 0x1: // lh case.
+                // load 2 bytes in little endian format.
+                registers[rd] = memory[registers[rs1]+imm] | (memory[registers[rs1]+imm+1]<<8);
+                break;
+        }
+    }
     else if (opcodes[opcode] == "s") {
         int rs1 = (instruction>>15)&0b11111;
         int rs2 = (instruction>>20)&0b11111;
@@ -50,6 +65,23 @@ void execute(int instruction, long long registers[], char memory[], int& pc) {
                 memory[registers[rs1]+imm+1] = (registers[rs2]>>8)&0b11111111;
         }
     }
+    else if (opcodes[opcode] == "lui") {
+        int rd = (instruction>>7)&0b11111;
+        int imm = (instruction>>12);
+        registers[rd] = imm << 12;
+    }
+    else if (opcodes[opcode] == "auipc") {
+        int rd = (instruction>>7)&0b11111;
+        int imm = (instruction>>12);
+        registers[rd] = pc + (imm<<12);
+    }
+    else if (opcodes[opcode] == "j") {
+        int rd = (instruction>>7)&0b11111;
+        int imm = ((instruction>>31)&0b1)<<20 | ((instruction>>12)&0b11111111)<<12 | ((instruction>>20)&0b1)<<11 | ((instruction>>21)&0b11111111111)<<1;
+        registers[rd] = pc + 4;
+        pc += imm;
+        return;
+    }
     else if (opcodes[opcode] == "b") {
         int rs1 = (instruction>>15)&0b11111;
         int rs2 = (instruction>>20)&0b11111;
@@ -59,10 +91,11 @@ void execute(int instruction, long long registers[], char memory[], int& pc) {
             case 0x0: // beq case.
                 if (registers[rs1] == registers[rs2]) {
                     pc += imm;
+                    return;
                 }
                 break;
         }
     }
- pc=pc+4;
+ pc+=4;
 }
 

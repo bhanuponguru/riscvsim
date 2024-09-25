@@ -63,11 +63,15 @@
 
     unordered_map<int, string> opcodes={
         {0b0110011, "r"},
-        {0b0010011, "i"},
+{0b0010011, "i"},
+//opcode for all load instructions is 0b0000011. although this is i type, but we will will label it as l to differentiate it from other i types.
+{0b0000011, "l"},
+        {0b1100111, "jalr"},
         {0b0100011, "s"},
         {0b1100011, "b"},
-        {0b0110111, "u"},
-        {0b0010111, "u"},
+        //we will give seperet labels for lui and auipc because there opcodes are different. we will label them lui and auipc.
+        {0b0110111, "lui"},
+        {0b0010111, "auipc"},
         {0b1101111, "j"}
     };
 

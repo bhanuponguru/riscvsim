@@ -24,6 +24,7 @@ int main(int argc, char *argv[]) {
      initialize_registers();
      while (true) { //an infinite loop to take commands from the user.
         string command;
+        cout << "riscvsim> ";
         cin >> command;
         if (command == "load") {
             string filename;
@@ -41,6 +42,24 @@ int main(int argc, char *argv[]) {
             int instr=*(int*)(mem+pc);
             execute(instr, regs, mem, pc);
             cout << "executed instruction under pc: " << pc << " in line " << pc/4 << endl;
+        }
+        else if (command == "regs") {
+            for (int i=0; i<32; ++i) {
+                cout << "x" << i << ": " << regs[i] << endl;
+            }
+        }
+        else if (command == "reg") {
+            int reg;
+            cin >> reg;
+            cout << "x" << reg << ": " << regs[reg] << endl;
+        }
+        else if (command == "mem") {
+            size_t base, size;
+            cin >> hex >> base >> size;
+            //print memory from base to base+size in little endian format.
+            for (size_t i=size-1; i>=0; --i) {
+                cout << hex << (int)mem[base+i] << " ";
+            }
         }
         else if (command == "exit") {
             break;
