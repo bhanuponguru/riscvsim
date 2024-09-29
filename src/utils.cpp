@@ -11,15 +11,41 @@
 #include "instr.h"
 
 using namespace std;
-string int_to_hex(int n) {
+string int_to_hex(long long n, unsigned int count, bool sign_extend) {
     stringstream ss;
     ss << hex << n;
     string res=ss.str();
-    // if the number is less than 8 digits, we need to add leading zeros.
-    if (res.size() < 8) {
-        res=string(8-res.size(), '0')+res;
+    //if count is 0, we return the whole string.
+    if (count == 0) {
+        return res;
+    }
+    // if the number is less than count digits, we need to add leading zeros.
+    if (res.size() < count) {
+        res=string(count-res.size(), sign_extend ? res[0] : '0')+res;
+    }
+    // if the number is more than count digits, we need to remove the leading digits.
+    if (res.size() > count) {
+        res=res.substr(res.size()-count);
     }
     return res;
+}
+
+int sign_extend(int num, int bits) {
+    num=num<<(32-bits);
+    num=num>>(32-bits);
+    return num;
+}
+int to_int(string num) {
+    if (num[0] == '0' && num[1] == 'x') {
+        return stoi(num, nullptr, 16);
+    }
+    else if (num[0] == '0' && num[1] == 'b') {
+        return stoi(num, nullptr, 2);
+    }
+    else {
+        return stoi(num);
+    }
+    return stoi(num);
 }
 
 int get_label(string s, int x, unordered_map<string, unsigned int> labels) {
@@ -38,17 +64,17 @@ int get_register(string s, int x) {
     exit(1);
 }
 
-void load_from_file(string filename, char memory[], long long registers[], int& pc) {
+void load_from_file(string filename, char memory[], long long registers[], int& pc, unordered_map<string, unsigned int>& labels, vector<int>& line_numbers, vector<string>& lines) {
     ifstream input_file(filename);
-    vector<string> lines;
-    vector<int> line_numbers;
+    labels.clear();
+    line_numbers.clear();
+    lines.clear();
     string line;
     while (getline(input_file, line)) {
         lines.push_back(line);
     }
-    unordered_map<string, unsigned int> labels; // a hashmap to store  labels and there line numbers.
-    //vector to store line numbers.
     vector<vector<string>> instructions=preprocess_and_parse(lines, labels, line_numbers);
+    //clear labels, line numbers, lines, and every vector.
     //clear all registers.
     for (int i=0; i<32; ++i) {
         registers[i]=0;
@@ -87,7 +113,7 @@ void load_from_file(string filename, char memory[], long long registers[], int& 
                 int rd = get_register(instructions[x][1], line_numbers[x]+1);
                 int rs1 = get_register(instructions[x][2], line_numbers[x]+1);
                 int imm;
-                    imm = stoll(instructions[x][3]);
+                    imm = to_int(instructions[x][3]);
                if (operation == "slli" || operation == "srli" || operation == "srai")
                {
                     if(imm<0 || imm > 63){
@@ -127,7 +153,7 @@ void load_from_file(string filename, char memory[], long long registers[], int& 
                 s_instr instr=s[operation];
                 int rs1 = get_register(instructions[x][2], line_numbers[x]+1);
                 int rs2 = get_register(instructions[x][1], line_numbers[x]+1);
-                int imm = stoll(instructions[x][3]);
+                int imm = to_int(instructions[x][3]);
                 if( imm < -2048 || imm > 2047) {
                   cerr << " immediate value " << imm << " does not fit in 12 bits for the " << operation << " at line " << line_numbers[x]+1 << "." << endl;
                     exit(1);
@@ -156,7 +182,7 @@ void load_from_file(string filename, char memory[], long long registers[], int& 
             }
             u_instr instr=u[operation];
             int rd=get_register(instructions[x][1], line_numbers[x]+1);
-            long long int imm=stoll(instructions[x][2]);
+            int imm=to_int(instructions[x][2]);
                if(imm < 0 || imm > 4294967295) {
                 cerr << " immediate value " << imm << " does not fit in 32 bits for the " << operation << " at line " << line_numbers[x]+1 << "." << endl;
                 exit(1);
@@ -178,5 +204,6 @@ void load_from_file(string filename, char memory[], long long registers[], int& 
           cerr << "invalid operation " << operation << " at line " << line_numbers[x]+1 << "." << endl;
         exit(1);
      }
-
+input_file.close();
 }
+

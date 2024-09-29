@@ -1,4 +1,5 @@
 #include<iostream>
+#include<iomanip>
 #include<vector>
 #include<string>
 #include<fstream>
@@ -18,6 +19,9 @@ int main(int argc, char *argv[]) {
     char mem[0x50000]={0}; //we initialized with char because we want to access memory byte by byte.
     long long regs[32]={0};
     int pc=0;
+    vector<string> lines;
+    vector<int> line_numbers;
+    unordered_map<string, unsigned int> labels; // a hashmap to store  labels and there line numbers.
     //initialize stack pointer register.
     regs[2]=0x50000;
     vector<string> call_stack; //we are using vector because we have push pop functionality and we can access all the elements.
@@ -29,36 +33,35 @@ int main(int argc, char *argv[]) {
         if (command == "load") {
             string filename;
             cin >> filename;
-            load_from_file(filename, mem, regs, pc);
+            load_from_file(filename, mem, regs, pc, labels, line_numbers, lines);
         }
         else if (command == "run") {
             while (pc < 0x50000 && *(int*)(mem+pc) != 0) {
                 int instr=*(int*)(mem+pc);
-                execute(instr, regs, mem, pc);
-                cout << "executed instruction under pc: " << pc << " in line " << pc/4 << endl;
+                execute(instr, regs, mem, pc, lines, line_numbers);
             }
         }
         else if (command == "step") {
             int instr=*(int*)(mem+pc);
-            execute(instr, regs, mem, pc);
-            cout << "executed instruction under pc: " << pc << " in line " << pc/4 << endl;
+            execute(instr, regs, mem, pc, lines, line_numbers);
         }
         else if (command == "regs") {
             for (int i=0; i<32; ++i) {
-                cout << "x" << i << ": " << regs[i] << endl;
+                cout << "x" << i << ": 0x" << int_to_hex(regs[i], 16) << endl;
             }
         }
         else if (command == "reg") {
             int reg;
             cin >> reg;
-            cout << "x" << reg << ": " << regs[reg] << endl;
+            cout << "x" << reg << ": 0x" << int_to_hex(regs[reg], 16) << endl;
         }
         else if (command == "mem") {
             size_t base, size;
-            cin >> hex >> base >> size;
-            //print memory from base to base+size in little endian format.
-            for (size_t i=size-1; i>=0; --i) {
-                cout << hex << (int)mem[base+i] << " ";
+            cin >> hex >> base;
+            cin >> size;
+            //print memory starting from base to base+size.
+            for (size_t i=base; i<base+size; ++i) {
+                cout << "memory at 0x" << hex << i << ": 0x" << hex << setw(2) << (int)(unsigned char)mem[i] << endl;
             }
         }
         else if (command == "exit") {

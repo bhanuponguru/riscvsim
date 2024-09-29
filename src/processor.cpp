@@ -1,8 +1,14 @@
 #include "processor.h"
+#include<iostream>
+#include<vector>
 #include "constants.h"
 #include "instr.h"
+#include "utils.h"
 
-void execute(int instruction, long long registers[], char memory[], int& pc) {
+using namespace std;
+
+void execute(int instruction, long long registers[], char memory[], int& pc, vector<string> lines, vector<int> line_numbers) {
+    int current_pc=pc;
     int opcode = instruction&0b1111111;
     if (opcodes[opcode] == "r") {
         int rd = (instruction>>7)&0b11111;
@@ -28,6 +34,7 @@ void execute(int instruction, long long registers[], char memory[], int& pc) {
         int rd = (instruction>>7)&0b11111;
         int rs1 = (instruction>>15)&0b11111;
         int imm = (instruction>>20)&0b111111111111;
+        imm=sign_extend(imm, 12);
         int funct3 = (instruction>>12)&0b111;
         switch (funct3) {
             case 0x0: // addi case.
@@ -39,6 +46,9 @@ void execute(int instruction, long long registers[], char memory[], int& pc) {
         int rd = (instruction>>7)&0b11111;
         int rs1 = (instruction>>15)&0b11111;
         int imm = (instruction>>20)&0b111111111;
+        //shift left and right to sign extend.
+        imm=imm<<20;
+        imm=imm>>20;
         int funct3 = (instruction>>12)&0b111;
         switch (funct3) {
             case 0x0: // lb case.
@@ -91,11 +101,13 @@ void execute(int instruction, long long registers[], char memory[], int& pc) {
             case 0x0: // beq case.
                 if (registers[rs1] == registers[rs2]) {
                     pc += imm;
+ cout << "executed instruction: " << lines[line_numbers[(current_pc/4)+1]-1] << " ; under pc: " << current_pc << " in line " << (current_pc/4)+1 << endl;
                     return;
                 }
                 break;
         }
     }
  pc+=4;
+ cout << "executed instruction: " << lines[line_numbers[(current_pc/4)+1]-1] << " ; under pc: " << current_pc << " in line " << (current_pc/4)+1 << endl;
 }
 
