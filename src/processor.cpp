@@ -103,13 +103,13 @@ void execute(int instruction, long long registers[], char memory[], int& pc, vec
             case 0x0: // beq case.
                 if (registers[rs1] == registers[rs2]) {
                     pc += imm;
- cout << "executed instruction: " << lines[line_numbers[(current_pc/4)]] << " ; under pc: " << current_pc << " in line " << (current_pc/4)+1 << endl;
+ cout << "executed instruction: " << lines[line_numbers[(current_pc/4)]] << " ; under pc: " << current_pc << " in line " << line_numbers[(current_pc/4)]+1 << endl;
                     return;
                 }
                 break;
         }
     }
  pc+=4;
- cout << "executed instruction: " << lines[line_numbers[(current_pc/4)]] << " ; under pc: " << current_pc << " in line " << (current_pc/4)+1 << endl;
+ cout << "executed instruction: " << lines[line_numbers[(current_pc/4)]] << " ; under pc: " << current_pc << " in line " << line_numbers[(current_pc/4)]+1 << endl;
 }
 

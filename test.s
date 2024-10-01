@@ -1,3 +1,6 @@
+.data
+.word 0x12345678
+.text
 addi x5, x0, -1
 lui x6, 16
 sh x5, 0(x6)

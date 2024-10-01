@@ -36,12 +36,17 @@ int main(int argc, char *argv[]) {
             load_from_file(filename, mem, regs, pc, labels, line_numbers, lines);
         }
         else if (command == "run") {
-            while (pc < 0x50000 && *(int*)(mem+pc) != 0) {
+            while (pc < 0x10000 && *(int*)(mem+pc) != 0) {
                 int instr=*(int*)(mem+pc);
                 execute(instr, regs, mem, pc, lines, line_numbers);
             }
         }
         else if (command == "step") {
+            //if no instructions, then report that execution completed.
+            if (pc >= 0x10000 || *(int*)(mem+pc) == 0) {
+                cout << "execution completed." << endl;
+                continue;
+            }
             int instr=*(int*)(mem+pc);
             execute(instr, regs, mem, pc, lines, line_numbers);
         }

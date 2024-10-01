@@ -1,9 +1,56 @@
 #include "preprocessor.h"
+#include "utils.h"
+#include<sstream>
 
-vector<vector<string>> preprocess_and_parse(vector<string> lines, unordered_map<string, unsigned int>& labels, vector<int>& line_numbers) {
+vector<vector<string>> preprocess_and_parse(vector<string> lines, unordered_map<string, unsigned int>& labels, vector<int>& line_numbers, char mem[]) {
     //preprocess the input file, that is ignore all comments and split the tokens.
     vector<string> instructions;
+    //find the .data section and store the data in memory.
+    bool data_section=false;
     for (auto line=lines.begin(); line != lines.end(); ++line) {
+        if (*line == ".data") {
+            data_section=true;
+            continue;
+        }
+        if (!data_section) {
+            continue;
+        }
+        if (*line == ".text") {
+            break;
+        }
+        vector<string> tokens;
+        string token;
+        stringstream ss(*line);
+        while (ss >> token) {
+            tokens.push_back(token);
+        }
+        if (tokens.size() == 0) {
+            continue;
+        }
+        if (tokens[0] == ";") {
+            continue;
+        }
+        if (tokens[0] == ".word") {
+            for (size_t i=1; i<tokens.size() && tokens[i][0]!=';'; ++i) {
+                int val=to_int(tokens[i]);
+                //store val in little endian format.
+                for (int j=0; j<4; ++j) {
+                    mem[j]=val&0xff;
+                    val=val>>8;
+                }
+                mem+=4;
+            }
+        }
+    }
+    bool text=false;
+    for (auto line=lines.begin(); line != lines.end(); ++line) {
+        if (*line == ".text") {
+            text=true;
+            continue;
+        }
+        if (!text) {
+            continue;
+        }
         string instruction;
         for (auto c=line->begin(); c != line->end(); ++c) {
             if (*c == ';') {

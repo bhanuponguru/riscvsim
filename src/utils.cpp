@@ -73,7 +73,6 @@ void load_from_file(string filename, char memory[], long long registers[], int& 
     while (getline(input_file, line)) {
         lines.push_back(line);
     }
-    vector<vector<string>> instructions=preprocess_and_parse(lines, labels, line_numbers);
     //clear labels, line numbers, lines, and every vector.
     //clear all registers.
     for (int i=0; i<32; ++i) {
@@ -86,6 +85,7 @@ void load_from_file(string filename, char memory[], long long registers[], int& 
     //initialize stack pointer register.
     registers[2]=0x50000;
     pc=0; //reset pc.
+    vector<vector<string>> instructions=preprocess_and_parse(lines, labels, line_numbers, memory+0x10000);
         for (size_t x=0; x < instructions.size(); ++x) {
         if (instructions[x].size() == 0) {
             continue;
