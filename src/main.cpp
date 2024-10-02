@@ -21,8 +21,8 @@ int main(int argc, char *argv[]) {
     int pc=0;
     vector<string> lines;
     vector<int> line_numbers;
-    unordered_map<string, unsigned int> labels; // a hashmap to store  labels and there line numbers.
-    //initialize stack pointer register.
+   unordered_map<string, unsigned int> labels; // a hashmap to store  labels and there line numbers.
+     //initialize stack pointer register.
     vector<int> break_line;
     regs[2]=0x50000;
     vector<call_item> call_stack; //we are using vector because we have push pop functionality and we can access all the elements.
@@ -35,6 +35,7 @@ int main(int argc, char *argv[]) {
             string filename;
             cin >> filename;
             load_from_file(filename, mem, regs, pc, labels, line_numbers, lines);
+            call_stack.push_back(call_item("main",0));
         }
         else if (command == "run") {
             while (pc < 0x10000 && *(int*)(mem+pc) != 0) {
@@ -50,7 +51,10 @@ int main(int argc, char *argv[]) {
                 break;
                }
                 int instr=*(int*)(mem+pc);
-                execute(instr, regs, mem, pc, lines, line_numbers);
+                execute(instr, regs, mem, pc, lines, line_numbers,labels,call_stack);
+            }
+            if(*(int*)(mem+pc) == 0 || pc >= 0x10000){
+                call_stack.clear();
             }
         }
         else if (command == "step") {
@@ -60,7 +64,7 @@ int main(int argc, char *argv[]) {
                 continue;
             }
             int instr=*(int*)(mem+pc);
-            execute(instr, regs, mem, pc, lines, line_numbers);
+            execute(instr, regs, mem, pc, lines, line_numbers, labels, call_stack);
         }
         else if (command == "regs") {
             for (int i=0; i<32; ++i) {
@@ -111,10 +115,23 @@ int main(int argc, char *argv[]) {
             }
             if(i == break_line.size()) {
                 cout << "No breakpoint set at line number " << line_number << endl;
-            }
+                }
             }
         }
+        else if(command == "show-stack") {
+            if(call_stack.empty()) {
+                cout << "Empty call stack : Execution Complete" << endl;
+            }
+            else {
+                cout << "Call stack:" << endl;
+            for(size_t i=0; i<call_stack.size(); i++) {
+                    cout << call_stack[i].get_label() << ":" << call_stack[i].get_line() << endl; 
+                }
+            }
+        }
+
         else if (command == "exit") {
+            cout << "Exited the Simulator" << endl;
             break;
         }
      }

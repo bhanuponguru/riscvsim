@@ -7,7 +7,7 @@
 
 using namespace std;
 
-void execute(int instruction, long long registers[], char memory[], int& pc, vector<string> lines, vector<int> line_numbers) {
+void execute(int instruction, long long registers[], char memory[], int& pc, vector<string> lines, vector<int> line_numbers, unordered_map<string, unsigned int> labels, vector<call_item> &call_stack) {
     int current_pc=pc;
     int opcode = instruction&0b1111111;
     if (opcodes[opcode] == "r") {
@@ -40,6 +40,17 @@ void execute(int instruction, long long registers[], char memory[], int& pc, vec
             case 0x0: // addi case.
                 registers[rd] = registers[rs1] + imm;
                 break;
+        }
+    }
+    else if(opcodes[opcode] == "jalr") {
+        int rd = (instruction>>7)&0b11111;
+        int rs1 = (instruction>>15)&0b11111;
+        int imm = (instruction>>20)&0b111111111111;
+        imm=sign_extend(imm, 12);
+        registers[rd] = pc + 4;
+        pc += registers[rs1] + imm ;
+        if(rs1 == 1) {
+            call_stack.pop_back();
         }
     }
     else if (opcodes[opcode] == "l") {
@@ -90,6 +101,16 @@ void execute(int instruction, long long registers[], char memory[], int& pc, vec
         int imm = ((instruction>>31)&0b1)<<20 | ((instruction>>12)&0b11111111)<<12 | ((instruction>>20)&0b1)<<11 | ((instruction>>21)&0b11111111111)<<1;
         registers[rd] = pc + 4;
         pc += imm;
+        if(rd == 1) {
+        // to find the label
+        for(auto x =labels.begin(); x != labels.end(); x++){
+            if(int(x->second) == pc/4){
+                call_stack.push_back(call_item(x->first,line_numbers[current_pc/4] +1));
+                break;
+            }
+
+        }
+        }
         return;
     }
     else if (opcodes[opcode] == "b") {
@@ -111,5 +132,6 @@ void execute(int instruction, long long registers[], char memory[], int& pc, vec
     }
  pc+=4;
  cout << "executed instruction: " << lines[line_numbers[(current_pc/4)]] << " ; under pc: " << current_pc << " in line " << line_numbers[(current_pc/4)]+1 << endl;
+ call_stack[call_stack.size()-1].setline(line_numbers[current_pc/4]+1);
 }
 
