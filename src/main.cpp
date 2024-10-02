@@ -89,8 +89,7 @@ int main(int argc, char *argv[]) {
                 int line_number;
                 cin >> line_number;
 
-                int break_point_pc = line_numbers[line_number];
-                break_line.push_back(break_point_pc);
+                break_line.push_back(line_number);
 
                 cout << "Breakpoint Set at line number " << line_number << endl;
         }
@@ -98,17 +97,20 @@ int main(int argc, char *argv[]) {
             int line_number;
             cin >> line_number;
 
-            int break_point_pc = line_numbers[line_number];
             //To find and delete breakpoint.
             if(break_line.empty()){
                 cout << "No breakpoint set at line number " << line_number << endl;               
             }
             else{
-            for (size_t i =0; i < break_line.size(); i++) {
-                if(break_line[i] == break_point_pc) {
+                size_t i;
+            for (i =0; i < break_line.size(); i++) {
+                if(break_line[i] == line_number) {
                     break_line.erase(break_line.begin() + i);
                     cout << "Deleted breakpoint at line number " << line_number << endl;
                 }
+            }
+            if(i == break_line.size()) {
+                cout << "No breakpoint set at line number " << line_number << endl;
             }
             }
         }
