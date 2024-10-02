@@ -82,7 +82,7 @@ void initialize_registers() {
         registers["x"+to_string(i)]=i;
     }
     //alias
-    registers["xero"] = 0;
+    registers["zero"] = 0;
     registers["ra"] = 1;
     registers["sp"] = 2;
     registers["gp"] = 3;
