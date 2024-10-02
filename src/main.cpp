@@ -23,6 +23,7 @@ int main(int argc, char *argv[]) {
     vector<int> line_numbers;
     unordered_map<string, unsigned int> labels; // a hashmap to store  labels and there line numbers.
     //initialize stack pointer register.
+    vector<int> break_line;
     regs[2]=0x50000;
     vector<call_item> call_stack; //we are using vector because we have push pop functionality and we can access all the elements.
      initialize_registers();
@@ -37,6 +38,17 @@ int main(int argc, char *argv[]) {
         }
         else if (command == "run") {
             while (pc < 0x10000 && *(int*)(mem+pc) != 0) {
+                //check if any current line matches any breakpoint
+                size_t i;
+               for (i=0; i < break_line.size(); i++ ){
+                if(line_numbers[pc/4] + 1 == break_line[i] ){
+                    break;
+                }
+               }
+               if(i< break_line.size()) {
+                cout << "Execution stopped at breakpoint" << endl;
+                break;
+               }
                 int instr=*(int*)(mem+pc);
                 execute(instr, regs, mem, pc, lines, line_numbers);
             }
@@ -67,6 +79,37 @@ int main(int argc, char *argv[]) {
             //print memory starting from base to base+size.
             for (size_t i=base; i<base+size; ++i) {
                 cout << "memory at 0x" << hex << i << ": 0x" << hex << setw(2) << (int)(unsigned char)mem[i] << endl;
+            }
+        }
+        else if (command == "break") {
+                if(break_line.size() >=5) {
+                    cout << "Maximum Number of Breakpoints reached" << endl;
+                    continue;
+                }
+                int line_number;
+                cin >> line_number;
+
+                int break_point_pc = line_numbers[line_number];
+                break_line.push_back(break_point_pc);
+
+                cout << "Breakpoint Set at line number " << line_number << endl;
+        }
+        else if (command == "delete_break") {
+            int line_number;
+            cin >> line_number;
+
+            int break_point_pc = line_numbers[line_number];
+            //To find and delete breakpoint.
+            if(break_line.empty()){
+                cout << "No breakpoint set at line number " << line_number << endl;               
+            }
+            else{
+            for (size_t i =0; i < break_line.size(); i++) {
+                if(break_line[i] == break_point_pc) {
+                    break_line.erase(break_line.begin() + i);
+                    cout << "Deleted breakpoint at line number " << line_number << endl;
+                }
+            }
             }
         }
         else if (command == "exit") {
