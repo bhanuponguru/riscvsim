@@ -40,9 +40,42 @@ vector<vector<string>> preprocess_and_parse(vector<string> lines, unordered_map<
                 }
                 mem+=4;
             }
+            }
+            else if (tokens[0] == ".half") {
+            for (size_t i=1; i<tokens.size() && tokens[i][0]!=';'; ++i) {
+                int val=to_int(tokens[i]);
+                //store val in little endian format.
+                for (int j=0; j<2; ++j) {
+                    mem[j]=val&0xff;
+                    val=val>>8;
+                }
+                mem+=2;
+            }
+        }
+        else if (tokens[0] == ".double") {
+            for (size_t i=1; i<tokens.size() && tokens[i][0]!=';'; ++i) {
+                long long val=to_int(tokens[i]);
+                //store val in little endian format.
+                for (int j=0; j<8; ++j) {
+                    mem[j]=val&0xff;
+                    val=val>>8;
+                }
+                mem+=8;
+            }
+        }
+        else if (tokens[0] == ".byte") {
+            for (size_t i=1; i<tokens.size() && tokens[i][0]!=';'; ++i) {
+                int val=to_int(tokens[i]);
+                *mem=val&0xff;
+                ++mem;
+            }
         }
     }
     bool text=false;
+    //if previously, there is no data section found, then by default text section is true.
+    if (!data_section) {
+        text=true;
+    }
     for (auto line=lines.begin(); line != lines.end(); ++line) {
         if (*line == ".text") {
             text=true;

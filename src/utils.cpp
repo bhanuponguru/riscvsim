@@ -35,17 +35,18 @@ int sign_extend(int num, int bits) {
     num=num>>(32-bits);
     return num;
 }
-int to_int(string num) {
+
+long long to_int(string num) {
     if (num[0] == '0' && num[1] == 'x') {
-        return stoi(num, nullptr, 16);
+        return stoll(num, nullptr, 16);
     }
     else if (num[0] == '0' && num[1] == 'b') {
-        return stoi(num, nullptr, 2);
+        return stoll(num, nullptr, 2);
     }
     else {
-        return stoi(num);
+        return stoll(num);
     }
-    return stoi(num);
+    return stoll(num);
 }
 
 int get_label(string s, int x, unordered_map<string, unsigned int> labels) {
@@ -207,3 +208,20 @@ void load_from_file(string filename, char memory[], long long registers[], int& 
 input_file.close();
 }
 
+
+call_item::call_item(string label, int line) {
+    this->label=label;
+        this->line=line;
+}
+
+string call_item::get_label() {
+    return label;
+}
+
+int call_item::get_line() {
+    return line;
+}
+
+void call_item::setline(int line) {
+    this->line=line;
+}
