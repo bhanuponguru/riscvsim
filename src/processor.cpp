@@ -109,7 +109,7 @@ void execute(int instruction, long long registers[], char memory[], int& pc, vec
         int imm = (instruction>>20)&0b111111111111;
         imm=sign_extend(imm, 12);
         registers[rd] = pc + 4;
-        pc += registers[rs1] + imm ;
+        pc = registers[rs1] + imm ;
         call_stack[call_stack.size()-1].setline(line_numbers[(current_pc/4)] + 1);
         if(rs1 == 1) {
             call_stack.pop_back();
@@ -124,13 +124,13 @@ void execute(int instruction, long long registers[], char memory[], int& pc, vec
         imm=imm<<20;
         imm=imm>>20;
         int funct3 = (instruction>>12)&0b111;
+        registers[rd]=0;
         switch (funct3) {
             case 0x0: // lb case.
                 registers[rd] = memory[registers[rs1]+imm];
                 break;
             case 0x1: // lh case.
                 // load 2 bytes in little endian format.
-                registers[rd]=0;
                 for (int i = 0; i < 2; i++) {
                     registers[rd] += (memory[registers[rs1]+imm+i] & 0xff) << (i*8);
                 }
@@ -142,7 +142,7 @@ void execute(int instruction, long long registers[], char memory[], int& pc, vec
                 break;
             case 0x3: // ld case.
             for (int i = 0; i < 8; i++) {
-                registers[rd] |= (memory[registers[rs1]+imm+i] & 0xff) << (i*8);
+                registers[rd] += (memory[registers[rs1]+imm+i] & 0xff) << (i*8);
             }
                 break;
             case 0x4: // lbu case.
@@ -173,19 +173,19 @@ void execute(int instruction, long long registers[], char memory[], int& pc, vec
             case 0x1 : // sh case.
                 // store 2 bytes in little endian format.
                 for (int i = 0; i < 2; i++) {
-                    memory[registers[rs1]+imm+i] = (registers[rs2] >> (i*8)) & 0xff;
+                    memory[registers[rs1]+imm+i] = ((unsigned long long)registers[rs2] >> (i*8)) & 0xff;
                 }
                 break;
             case 0x2: // sw case.
             // store 4 bytes in little endian format.
             for (int i = 0; i < 4; i++) {
-                memory[registers[rs1]+imm+i] = (registers[rs2] >> (i*8)) & 0xff;
+                memory[registers[rs1]+imm+i] = ((unsigned long long)registers[rs2] >> (i*8)) & 0xff;
             }
                 break;
             case 0x3: // sd case.
             // store 8 bytes in little endian format.
             for (int i = 0; i < 8; i++) {
-                memory[registers[rs1]+imm+i] = (registers[rs2] >> (i*8)) & 0xff;
+                memory[registers[rs1]+imm+i] = ((unsigned long long)registers[rs2] >> (i*8)) & 0xff;
             }
                 break;
         }
@@ -223,7 +223,7 @@ void execute(int instruction, long long registers[], char memory[], int& pc, vec
         int rs2 = (instruction>>20)&0b11111;
         //in imm, last bit is ignored in the instruction because it is always 0.
         int imm = (((instruction>>31)&0b1)<<12 | ((instruction>>7)&0b1)<<11 | ((instruction>>25)&0b111111)<<5 | ((instruction>>8)&0b1111)<<1) & 0b1111111111110;
-        imm = sign_extend(imm, 12);
+        imm = sign_extend(imm, 13);
         int funct3 = (instruction>>12)&0b111;
         switch (funct3) {
             case 0x0: // beq case.

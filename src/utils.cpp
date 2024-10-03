@@ -243,10 +243,10 @@ string get_instr(string line) {
 string trim_space(string s) {
     size_t start=0;
     size_t end=s.length();
-    while (start < s.length() && s[start] == ' ') {
+    while (start < s.length() && (s[start] == ' ' || s[start] == '\t')) {
         start++;
     }
-    while (end > 0 && s[end-1] == ' ') {
+    while (end > 0 && (s[end-1] == ' ' || s[end-1] == '\t')) {
         end--;
     }
     return s.substr(start, end-start);

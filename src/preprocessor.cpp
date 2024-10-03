@@ -146,6 +146,24 @@ vector<vector<string>> preprocess_and_parse(vector<string> lines, unordered_map<
         parsed.push_back(parsed_instr);
         ++lc;
     }
+    //loop through all parsed and trim empty spaces.
+    for (auto instr=parsed.begin(); instr != parsed.end(); ++instr) {
+        for (auto token=instr->begin(); token != instr->end(); ++token) {
+            *token=trim_space(*token);
+        }
+    }
+    //loop through parsed instructions and delete all empty tokens.
+    for (auto instr=parsed.begin(); instr != parsed.end(); ++instr) {
+        vector<int> empty_tokens;
+        for (auto token=instr->begin(); token != instr->end(); ++token) {
+            if (*token == "") {
+                empty_tokens.push_back(token-instr->begin());
+            }
+        }
+        for (auto token=empty_tokens.rbegin(); token != empty_tokens.rend(); ++token) {
+            instr->erase(instr->begin()+*token);
+        }
+    }
     return parsed;
 }
 

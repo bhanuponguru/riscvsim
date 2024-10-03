@@ -28,8 +28,8 @@ int main(int argc, char *argv[]) {
     vector<call_item> call_stack; //we are using vector because we have push pop functionality and we can access all the elements.
      initialize_registers();
      while (true) { //an infinite loop to take commands from the user.
+     regs[0]=0; //x0 is 0 for ever.
         string command;
-        cout << "riscvsim> ";
         cin >> command;
         if(*(int*)(mem+pc) == 0 || pc >= 0x10000){
             call_stack.clear();
@@ -41,11 +41,15 @@ int main(int argc, char *argv[]) {
             call_stack.push_back(call_item("main",0));
         }
         else if (command == "run") {
+            if (pc >= 0x10000 || *(int*)(mem+pc) == 0) {
+                cout << "Nothing to run" << endl;
+                continue;
+            }
             int prev_pc = pc;
             while (pc < 0x10000 && *(int*)(mem+pc) != 0) {
                 int instr=*(int*)(mem+pc);
                 execute(instr, regs, mem, pc, lines, line_numbers,labels,call_stack);
-                cout << "executed " << get_instr(lines[line_numbers[(prev_pc/4)]]) << "; pc=0x" << int_to_hex(prev_pc,8) << endl;
+                cout << "Executed " << get_instr(lines[line_numbers[(prev_pc/4)]]) << "; PC=0x" << int_to_hex(prev_pc,8) << endl;
                 prev_pc = pc;
                 //check if any current line after execution matches any breakpoint
                 size_t i;
@@ -63,31 +67,31 @@ int main(int argc, char *argv[]) {
         else if (command == "step") {
             //if no instructions, then report that execution completed.
             if (pc >= 0x10000 || *(int*)(mem+pc) == 0) {
-                cout << "execution completed." << endl;
+                cout << "Nothing to step" << endl;
                 continue;
             }
             int instr=*(int*)(mem+pc);
             int prev_pc = pc;
             execute(instr, regs, mem, pc, lines, line_numbers, labels, call_stack);
-            cout << "executed " << get_instr(lines[line_numbers[(prev_pc/4)]]) << "; pc=0x" << int_to_hex(prev_pc,8) << endl;
+            cout << "executed " << get_instr(lines[line_numbers[(prev_pc/4)]]) << "; PC=0x" << int_to_hex(prev_pc,8) << endl;
         }
         else if (command == "regs") {
+            cout << "Registers:" << endl;
             for (int i=0; i<32; ++i) {
-                cout << "x" << i << ": 0x" << int_to_hex(regs[i], 16) << endl;
+                cout << "x" << dec << i;
+                if (i < 10) {
+                    cout << " ";
+                }
+                cout << " = 0x" << hex << regs[i] << endl;
             }
-        }
-        else if (command == "reg") {
-            int reg;
-            cin >> reg;
-            cout << "x" << reg << ": 0x" << int_to_hex(regs[reg], 16) << endl;
         }
         else if (command == "mem") {
             size_t base, size;
             cin >> hex >> base;
-            cin >> size;
+            cin >> dec >> size;
             //print memory starting from base to base+size.
             for (size_t i=base; i<base+size; ++i) {
-                cout << "memory at 0x" << hex << i << ": 0x" << hex << setw(2) << (int)(unsigned char)mem[i] << endl;
+                cout << "Memory[0x" << hex << i << "] = 0x" << hex << (int)(unsigned char)mem[i] << endl;
             }
         }
         else if (command == "break") {
@@ -100,9 +104,9 @@ int main(int argc, char *argv[]) {
 
                 break_line.push_back(line_number);
 
-                cout << "Breakpoint Set at line number " << line_number << endl;
+                cout << "Breakpoint Set at line " << line_number << endl;
         }
-        else if (command == "delete_break") {
+        else if (command == "del") {
             int line_number;
             cin >> line_number;
 
@@ -115,7 +119,7 @@ int main(int argc, char *argv[]) {
             for (i =0; i < break_line.size(); i++) {
                 if(break_line[i] == line_number) {
                     break_line.erase(break_line.begin() + i);
-                    cout << "Deleted breakpoint at line number " << line_number << endl;
+                    cout << "Deleted breakpoint at line " << line_number << endl;
                 }
             }
             if(i == break_line.size()) {
@@ -128,7 +132,7 @@ int main(int argc, char *argv[]) {
                 cout << "Empty call stack : Execution Complete" << endl;
             }
             else {
-                cout << "Call stack:" << endl;
+                cout << "Call Stack:" << endl;
             for(size_t i=0; i<call_stack.size(); i++) {
                     cout << call_stack[i].get_label() << ":" << call_stack[i].get_line() << endl; 
                 }
