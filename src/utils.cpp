@@ -72,7 +72,7 @@ void load_from_file(string filename, char memory[], long long registers[], int& 
     lines.clear();
     string line;
     while (getline(input_file, line)) {
-        lines.push_back(line);
+        lines.push_back(trim_space(line));
     }
     //clear labels, line numbers, lines, and every vector.
     //clear all registers.
@@ -238,4 +238,16 @@ string get_instr(string line) {
         return line;
     }
     return line.substr(pos+2);
+}
+
+string trim_space(string s) {
+    size_t start=0;
+    size_t end=s.length();
+    while (start < s.length() && s[start] == ' ') {
+        start++;
+    }
+    while (end > 0 && s[end-1] == ' ') {
+        end--;
+    }
+    return s.substr(start, end-start);
 }

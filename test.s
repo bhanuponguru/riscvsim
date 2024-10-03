@@ -1,5 +1,5 @@
 main: addi x10, x0, 2
-lui sp, 0x50
+    lui sp, 0x50
 jal x1, fact
 beq x0, x0, exit
 fact: addi sp, sp, -16

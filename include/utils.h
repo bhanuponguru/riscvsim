@@ -25,3 +25,4 @@ class call_item {
 };
 
 string get_instr(string line);
+string trim_space(string s);
