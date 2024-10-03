@@ -234,9 +234,9 @@ string get_instr(string line) {
         }
     }
     if (pos == line.length()) {
-        return line;
+        return trim_space(line);
     }
-    return line.substr(pos+2);
+    return trim_space(line.substr(pos+2));
 }
 
 string trim_space(string s) {
