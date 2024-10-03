@@ -37,6 +37,7 @@ int main(int argc, char *argv[]) {
             string filename;
             cin >> filename;
             load_from_file(filename, mem, regs, pc, labels, line_numbers, lines);
+            break_line.clear();
             call_stack.push_back(call_item("main",0));
         }
         else if (command == "run") {
