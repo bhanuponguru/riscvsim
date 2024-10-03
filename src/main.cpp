@@ -131,7 +131,7 @@ int main(int argc, char *argv[]) {
         }
         else if(command == "show-stack") {
             if(call_stack.empty()) {
-                cout << "Empty call stack : Execution Complete" << endl;
+                cout << "Empty call stack: Execution Complete" << endl;
             }
             else {
                 cout << "Call Stack:" << endl;
