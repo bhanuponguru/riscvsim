@@ -100,7 +100,7 @@ int main(int argc, char *argv[]) {
                     continue;
                 }
                 int line_number;
-                cin >> line_number;
+                cin >> dec >> line_number;
 
                 break_line.push_back(line_number);
 
@@ -108,7 +108,9 @@ int main(int argc, char *argv[]) {
         }
         else if (command == "del") {
             int line_number;
-            cin >> line_number;
+            string del_cmd;
+            cin >> del_cmd;
+            cin >> dec >> line_number;
 
             //To find and delete breakpoint.
             if(break_line.empty()){
