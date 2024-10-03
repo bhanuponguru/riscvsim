@@ -225,3 +225,17 @@ int call_item::get_line() {
 void call_item::setline(int line) {
     this->line=line;
 }
+
+string get_instr(string line) {
+    //if there is a colon, then the instruction is after the colon and space. or else return same line.
+    size_t pos=0;
+    for (pos=0; pos < line.length(); ++pos) {
+        if (line[pos] == ':') {
+            break;
+        }
+    }
+    if (pos == line.length()) {
+        return line;
+    }
+    return line.substr(pos+2);
+}

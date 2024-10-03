@@ -23,3 +23,5 @@ class call_item {
     int get_line();
     void setline(int line);
 };
+
+string get_instr(string line);

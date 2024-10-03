@@ -41,9 +41,12 @@ int main(int argc, char *argv[]) {
             call_stack.push_back(call_item("main",0));
         }
         else if (command == "run") {
+            int prev_pc = pc;
             while (pc < 0x10000 && *(int*)(mem+pc) != 0) {
                 int instr=*(int*)(mem+pc);
                 execute(instr, regs, mem, pc, lines, line_numbers,labels,call_stack);
+                cout << "executed " << get_instr(lines[line_numbers[(prev_pc/4)]]) << "; pc=0x" << int_to_hex(prev_pc,8) << endl;
+                prev_pc = pc;
                 //check if any current line after execution matches any breakpoint
                 size_t i;
                for (i=0; i < break_line.size(); i++ ){
@@ -64,7 +67,9 @@ int main(int argc, char *argv[]) {
                 continue;
             }
             int instr=*(int*)(mem+pc);
+            int prev_pc = pc;
             execute(instr, regs, mem, pc, lines, line_numbers, labels, call_stack);
+            cout << "executed " << get_instr(lines[line_numbers[(prev_pc/4)]]) << "; pc=0x" << int_to_hex(prev_pc,8) << endl;
         }
         else if (command == "regs") {
             for (int i=0; i<32; ++i) {
@@ -134,5 +139,9 @@ int main(int argc, char *argv[]) {
             cout << "Exited the Simulator" << endl;
             break;
         }
+        else {
+            cout << "Invalid command" << endl;
+        }
+        cout << endl;
      }
 }
