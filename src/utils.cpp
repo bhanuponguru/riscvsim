@@ -84,7 +84,6 @@ void load_from_file(string filename, char memory[], long long registers[], int& 
         memory[i]=0;
     }
     //initialize stack pointer register.
-    registers[2]=0x50000;
     pc=0; //reset pc.
     vector<vector<string>> instructions=preprocess_and_parse(lines, labels, line_numbers, memory+0x10000);
         for (size_t x=0; x < instructions.size(); ++x) {

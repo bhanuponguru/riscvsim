@@ -24,7 +24,6 @@ int main(int argc, char *argv[]) {
    unordered_map<string, unsigned int> labels; // a hashmap to store  labels and there line numbers.
      //initialize stack pointer register.
     vector<int> break_line;
-    regs[2]=0x50000;
     vector<call_item> call_stack; //we are using vector because we have push pop functionality and we can access all the elements.
      initialize_registers();
      while (true) { //an infinite loop to take commands from the user.
