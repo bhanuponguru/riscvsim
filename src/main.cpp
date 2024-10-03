@@ -31,6 +31,9 @@ int main(int argc, char *argv[]) {
         string command;
         cout << "riscvsim> ";
         cin >> command;
+        if(*(int*)(mem+pc) == 0 || pc >= 0x10000){
+            call_stack.clear();
+        }
         if (command == "load") {
             string filename;
             cin >> filename;
@@ -39,7 +42,9 @@ int main(int argc, char *argv[]) {
         }
         else if (command == "run") {
             while (pc < 0x10000 && *(int*)(mem+pc) != 0) {
-                //check if any current line matches any breakpoint
+                int instr=*(int*)(mem+pc);
+                execute(instr, regs, mem, pc, lines, line_numbers,labels,call_stack);
+                //check if any current line after execution matches any breakpoint
                 size_t i;
                for (i=0; i < break_line.size(); i++ ){
                 if(line_numbers[pc/4] + 1 == break_line[i] ){
@@ -50,11 +55,6 @@ int main(int argc, char *argv[]) {
                 cout << "Execution stopped at breakpoint" << endl;
                 break;
                }
-                int instr=*(int*)(mem+pc);
-                execute(instr, regs, mem, pc, lines, line_numbers,labels,call_stack);
-            }
-            if(*(int*)(mem+pc) == 0 || pc >= 0x10000){
-                call_stack.clear();
             }
         }
         else if (command == "step") {

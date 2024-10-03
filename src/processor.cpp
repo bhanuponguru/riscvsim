@@ -70,8 +70,7 @@ void execute(int instruction, long long registers[], char memory[], int& pc, vec
         imm=sign_extend(imm, 12);
         int funct3 = (instruction>>12)&0b111;
         int funct6 =0;
-        imm = imm & 0b111111;
-        imm |= (funct6 << 6);
+        funct6 |= imm >> 6;
         switch (funct3) {
             case 0x0: // addi case.
                 registers[rd] = registers[rs1] + imm;
@@ -90,7 +89,7 @@ void execute(int instruction, long long registers[], char memory[], int& pc, vec
                 break;
             case 0x5: 
                 if (funct6 == 0x00) { // srli case.
-                    registers[rd] = ((unsigned long long)registers[rs1]) >> (imm << 6);
+                    registers[rd] = ((unsigned long long)registers[rs1]) >> (imm & 0b111111);
                 }
                 else if (funct6 == 0x10) { // srai case.
                     registers[rd] = registers[rs1] >> (imm << 6);
@@ -111,9 +110,12 @@ void execute(int instruction, long long registers[], char memory[], int& pc, vec
         imm=sign_extend(imm, 12);
         registers[rd] = pc + 4;
         pc += registers[rs1] + imm ;
+        call_stack[call_stack.size()-1].setline(line_numbers[(current_pc/4)] + 1);
         if(rs1 == 1) {
             call_stack.pop_back();
         }
+        cout << "executed instruction: " << lines[line_numbers[(current_pc/4)]] << " ; under pc: " << current_pc << " in line " << line_numbers[(current_pc/4)]+1 << endl;
+        return;
     }
     else if (opcodes[opcode] == "l") { // I-Type
         int rd = (instruction>>7)&0b11111;
@@ -129,21 +131,33 @@ void execute(int instruction, long long registers[], char memory[], int& pc, vec
                 break;
             case 0x1: // lh case.
                 // load 2 bytes in little endian format.
-                registers[rd] = memory[registers[rs1]+imm] & 0xff;
+                registers[rd]=0;
+                for (int i = 0; i < 2; i++) {
+                    registers[rd] += (memory[registers[rs1]+imm+i] & 0xff) << (i*8);
+                }
                 break;
             case 0x2: // lw case.
-                registers[rd] = memory[registers[rs1] + imm] &0xffff;
+            for (int i = 0; i < 4; i++) {
+                registers[rd] += (memory[registers[rs1]+imm+i] & 0xff) << (i*8);
+            }
                 break;
             case 0x3: // ld case.
-                registers[rd] = memory[registers[rs1] + imm] &0xffffffff;
+            for (int i = 0; i < 8; i++) {
+                registers[rd] |= (memory[registers[rs1]+imm+i] & 0xff) << (i*8);
+            }
                 break;
             case 0x4: // lbu case.
                 registers[rd] = (unsigned char)memory[registers[rs1] + imm];
                 break;
             case 0x5: // lhu case.
-                registers[rd] = (unsigned short)memory[registers[rs1] +imm] &0xff;
+            for (int i = 0; i < 2; i++) {
+                registers[rd] |= (memory[registers[rs1]+imm+i] & 0xff) << (i*8);
+            }
+                break;
             case 0x6: // lwu case.
-                registers[rd] = (unsigned int)memory[registers[rs1] + imm] &0xffff;
+            for (int i = 0; i < 4; i++) {
+                registers[rd] |= (memory[registers[rs1]+imm+i] & 0xff) << (i*8);
+            }
                 break;
         }
     }
@@ -151,6 +165,7 @@ void execute(int instruction, long long registers[], char memory[], int& pc, vec
         int rs1 = (instruction>>15)&0b11111;
         int rs2 = (instruction>>20)&0b11111;
         int imm = ((instruction>>25)&0b1111111)<<5 | ((instruction>>7)&0b11111);
+        imm = sign_extend(imm, 12);
         int funct3 = (instruction>>12)&0b111;
         switch (funct3) {
             case 0x0: // sb case.
@@ -158,16 +173,21 @@ void execute(int instruction, long long registers[], char memory[], int& pc, vec
                 break;
             case 0x1 : // sh case.
                 // store 2 bytes in little endian format.
-                memory[registers[rs1]+imm] = registers[rs2]&0b11111111;
-                memory[registers[rs1]+imm+1] = (registers[rs2]>>8)&0b11111111;
+                for (int i = 0; i < 2; i++) {
+                    memory[registers[rs1]+imm+i] = (registers[rs2] >> (i*8)) & 0xff;
+                }
                 break;
             case 0x2: // sw case.
-                memory[registers[rs1]+imm] = registers[rs2]&0b11111111;
-                memory[registers[rs1]+imm+1] = (registers[rs2]>>24)&0b11111111;
+            // store 4 bytes in little endian format.
+            for (int i = 0; i < 4; i++) {
+                memory[registers[rs1]+imm+i] = (registers[rs2] >> (i*8)) & 0xff;
+            }
                 break;
             case 0x3: // sd case.
-                memory[registers[rs1]+imm] = registers[rs2]&0b11111111;
-                memory[registers[rs1]+imm+1] = (registers[rs2]>>56)&0b11111111;
+            // store 8 bytes in little endian format.
+            for (int i = 0; i < 8; i++) {
+                memory[registers[rs1]+imm+i] = (registers[rs2] >> (i*8)) & 0xff;
+            }
                 break;
         }
     }
@@ -184,18 +204,20 @@ void execute(int instruction, long long registers[], char memory[], int& pc, vec
     else if (opcodes[opcode] == "j") {
         int rd = (instruction>>7)&0b11111;
         int imm = ((instruction>>31)&0b1)<<20 | ((instruction>>12)&0b11111111)<<12 | ((instruction>>20)&0b1)<<11 | ((instruction>>21)&0b11111111111)<<1;
+        imm = sign_extend(imm, 21);
         registers[rd] = pc + 4;
         pc += imm;
+        call_stack[call_stack.size()-1].setline(line_numbers[(current_pc/4)] + 1);
         if(rd == 1) {
         // to find the label
         for(auto x =labels.begin(); x != labels.end(); x++){
-            if(int(x->second) == pc/4){
+            if(int(x->second) == (pc/4)+1){
                 call_stack.push_back(call_item(x->first,line_numbers[current_pc/4] +1));
                 break;
             }
-
         }
         }
+        cout << "executed instruction: " << lines[line_numbers[(current_pc/4)]] << " ; under pc: " << current_pc << " in line " << line_numbers[(current_pc/4)]+1 << endl;
         return;
     }
     else if (opcodes[opcode] == "b") {
@@ -210,6 +232,7 @@ void execute(int instruction, long long registers[], char memory[], int& pc, vec
                 if (registers[rs1] == registers[rs2]) {
                     pc += imm;
                     cout << "executed instruction: " << lines[line_numbers[(current_pc/4)]] << " ; under pc: " << current_pc << " in line "<< line_numbers[(current_pc/4)]+1 << endl;
+                    call_stack[call_stack.size()-1].setline(line_numbers[(current_pc/4)] + 1);
                     return;
                 }
                 break;
@@ -217,6 +240,7 @@ void execute(int instruction, long long registers[], char memory[], int& pc, vec
                 if (registers[rs1] != registers[rs2]) {
                     pc += imm;
                     cout << "executed instruction: " << lines[line_numbers[(current_pc/4)]] << " ; under pc: " << current_pc << " in line " << line_numbers[(current_pc/4)]+1 << endl;
+                    call_stack[call_stack.size()-1].setline(line_numbers[(current_pc/4)] + 1);
                     return;
                 }
                 break;
@@ -224,6 +248,7 @@ void execute(int instruction, long long registers[], char memory[], int& pc, vec
                 if (registers[rs1] < registers[rs2]) {
                     pc += imm;
                     cout << "executed instruction: " << lines[line_numbers[(current_pc/4)]] << " ; under pc: " << current_pc << " in line " << line_numbers[(current_pc/4)]+1 << endl;
+                    call_stack[call_stack.size()-1].setline(line_numbers[(current_pc/4)] + 1);
                     return;
                 }
                 break;
@@ -231,20 +256,23 @@ void execute(int instruction, long long registers[], char memory[], int& pc, vec
                 if (registers[rs1] >= registers[rs2]) {
                     pc += imm;
                     cout << "executed instruction: " << lines[line_numbers[(current_pc/4)]] << " ; under pc: " << current_pc << " in line " << line_numbers[(current_pc/4)]+1 << endl;
+                    call_stack[call_stack.size()-1].setline(line_numbers[(current_pc/4)] + 1);
                     return;
                 }
                 break;
             case 0x6: // bltu case.
-                if (registers[rs1] < registers[rs2]) {
+                if ((unsigned long long)registers[rs1] < (unsigned long long)registers[rs2]) {
                     pc += imm;
                     cout << "executed instruction: " << lines[line_numbers[(current_pc/4)]] << " ; under pc: " << current_pc << " in line " << line_numbers[(current_pc/4)]+1 << endl;
+                    call_stack[call_stack.size()-1].setline(line_numbers[(current_pc/4)] + 1);
                     return;
                 }
                 break;
             case 0x7: // bgeu case.
-             if (registers[rs1] >= registers[rs2]) {
+             if ((unsigned long long)registers[rs1] >= (unsigned long long)registers[rs2]) {
                     pc += imm;
                     cout << "executed instruction: " << lines[line_numbers[(current_pc/4)]] << " ; under pc: " << current_pc << " in line " << line_numbers[(current_pc/4)]+1 << endl;
+                    call_stack[call_stack.size()-1].setline(line_numbers[(current_pc/4)] + 1);
                     return;
                 }
                 break;
@@ -253,6 +281,6 @@ void execute(int instruction, long long registers[], char memory[], int& pc, vec
     }
  pc+=4;
  cout << "executed instruction: " << lines[line_numbers[(current_pc/4)]] << " ; under pc: " << current_pc << " in line " << line_numbers[(current_pc/4)]+1 << endl;
- call_stack[call_stack.size()-1].setline(line_numbers[current_pc/4]+1);
+ call_stack[call_stack.size()-1].setline(line_numbers[(current_pc/4)] + 1);
 }
 
