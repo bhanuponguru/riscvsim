@@ -8,6 +8,7 @@
 using namespace std;
 
 void execute(int instruction, long long registers[], char memory[], int& pc, vector<string> lines, vector<int> line_numbers, unordered_map<string, unsigned int> labels, vector<call_item> &call_stack) {
+    registers[0]=0; //x0 is 0 for ever.
     int current_pc=pc;
     int opcode = instruction&0b1111111;
     if (opcodes[opcode] == "r") {
