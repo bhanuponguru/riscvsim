@@ -77,7 +77,7 @@ void execute(int instruction, long long registers[], char memory[], int& pc, vec
                 registers[rd] = registers[rs1] + imm;
                 break;
             case 0x1: // slli case.
-                registers[rd] = registers[rs1] << (imm << 6);
+                registers[rd] = registers[rs1] << (imm & 0b111111);
                 break;
             case 0x2: // slti case.
                 registers[rd] = (registers[rs1] < imm ) ? 1 : 0;
@@ -93,7 +93,7 @@ void execute(int instruction, long long registers[], char memory[], int& pc, vec
                     registers[rd] = ((unsigned long long)registers[rs1]) >> (imm & 0b111111);
                 }
                 else if (funct6 == 0x10) { // srai case.
-                    registers[rd] = registers[rs1] >> (imm << 6);
+                    registers[rd] = registers[rs1] >> (imm & 0b111111);
                 }
                 break;
             case 0x6: // ori case.
@@ -133,17 +133,19 @@ void execute(int instruction, long long registers[], char memory[], int& pc, vec
             case 0x1: // lh case.
                 // load 2 bytes in little endian format.
                 for (int i = 0; i < 2; i++) {
-                    registers[rd] += (memory[registers[rs1]+imm+i] & 0xff) << (i*8);
+                    registers[rd] |= (memory[registers[rs1]+imm+i] & 0xff) << (i*8);
                 }
+                registers[rd]=sign_extend(registers[rd], 16);
                 break;
             case 0x2: // lw case.
             for (int i = 0; i < 4; i++) {
-                registers[rd] += (memory[registers[rs1]+imm+i] & 0xff) << (i*8);
+                registers[rd] |= (memory[registers[rs1]+imm+i] & 0xff) << (i*8);
             }
+            registers[rd]=sign_extend(registers[rd], 32);
                 break;
             case 0x3: // ld case.
             for (int i = 0; i < 8; i++) {
-                registers[rd] += (memory[registers[rs1]+imm+i] & 0xff) << (i*8);
+                registers[rd] |= (long long)(memory[registers[rs1]+imm+i] & 0xff) << (i*8);
             }
                 break;
             case 0x4: // lbu case.

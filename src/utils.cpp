@@ -122,6 +122,7 @@ void load_from_file(string filename, char memory[], long long registers[], int& 
                     }    
                }
                else {
+                imm=sign_extend(imm,12);
                 if(imm< -2048 || imm >2047){
                   cerr << " immediate value " << imm << " does not fit in 12 bits for the " << operation << " at line " << line_numbers[x]+1 << "." << endl;
                     exit(1);

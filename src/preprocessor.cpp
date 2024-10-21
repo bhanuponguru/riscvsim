@@ -22,6 +22,9 @@ vector<vector<string>> preprocess_and_parse(vector<string> lines, unordered_map<
         string token;
         stringstream ss(*line);
         while (ss >> token) {
+            if (token[token.length()-1] == ',') {
+                token=token.substr(0, token.length()-1);
+            }
             tokens.push_back(token);
         }
         if (tokens.size() == 0) {
@@ -34,7 +37,7 @@ vector<vector<string>> preprocess_and_parse(vector<string> lines, unordered_map<
             for (size_t i=1; i<tokens.size() && tokens[i][0]!=';'; ++i) {
                 int val=to_int(tokens[i]);
                 //store val in little endian format.
-                for (int j=0; j<4; ++j) {
+                for (int j=0; j<4; --j) {
                     mem[j]=val&0xff;
                     val=val>>8;
                 }
@@ -52,7 +55,7 @@ vector<vector<string>> preprocess_and_parse(vector<string> lines, unordered_map<
                 mem+=2;
             }
         }
-        else if (tokens[0] == ".double") {
+        else if (tokens[0] == ".dword") {
             for (size_t i=1; i<tokens.size() && tokens[i][0]!=';'; ++i) {
                 long long val=to_int(tokens[i]);
                 //store val in little endian format.
