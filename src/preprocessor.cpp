@@ -37,7 +37,7 @@ vector<vector<string>> preprocess_and_parse(vector<string> lines, unordered_map<
             for (size_t i=1; i<tokens.size() && tokens[i][0]!=';'; ++i) {
                 int val=to_int(tokens[i]);
                 //store val in little endian format.
-                for (int j=0; j<4; --j) {
+                for (int j=0; j<4; ++j) {
                     mem[j]=val&0xff;
                     val=val>>8;
                 }

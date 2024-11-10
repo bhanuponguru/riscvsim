@@ -3,11 +3,12 @@
 #include<vector>
 #include "constants.h"
 #include "instr.h"
+#include "cache.h"
 #include "utils.h"
 
 using namespace std;
 
-void execute(int instruction, long long registers[], char memory[], int& pc, vector<string> lines, vector<int> line_numbers, unordered_map<string, unsigned int> labels, vector<call_item> &call_stack) {
+void execute(int instruction, long long registers[], char memory[], int& pc, vector<string> lines, vector<int> line_numbers, unordered_map<string, unsigned int> labels, vector<call_item> &call_stack, bool cache_enabled, cache& cache_memory) {
     registers[0]=0; //x0 is 0 for ever.
     int current_pc=pc;
     int opcode = instruction&0b1111111;
@@ -128,37 +129,100 @@ void execute(int instruction, long long registers[], char memory[], int& pc, vec
         registers[rd]=0;
         switch (funct3) {
             case 0x0: // lb case.
+            if (cache_enabled) {
+                char target[1];
+                cache_memory.load_memory(registers[rs1]+imm, 1, memory, target);
+                registers[rd] = target[0];
+            }
+            else {
                 registers[rd] = memory[registers[rs1]+imm];
+            }
                 break;
             case 0x1: // lh case.
                 // load 2 bytes in little endian format.
-                for (int i = 0; i < 2; i++) {
-                    registers[rd] |= (memory[registers[rs1]+imm+i] & 0xff) << (i*8);
+                if (cache_enabled) {
+                    char target[2];
+                    cache_memory.load_memory(registers[rs1]+imm, 2, memory, target);
+                    for (int i = 0; i < 2; i++) {
+                        registers[rd] |= (target[i] & 0xff) << (i*8);
+                    }
                 }
-                registers[rd]=sign_extend(registers[rd], 16);
+                else {
+                    for (int i = 0; i < 2; i++) {
+                        registers[rd] |= (memory[registers[rs1]+imm+i] & 0xff) << (i*8);
+                    }
+                }
+                registers[rd]=sign_extend(registers[rd], 32);
                 break;
             case 0x2: // lw case.
-            for (int i = 0; i < 4; i++) {
-                registers[rd] |= (memory[registers[rs1]+imm+i] & 0xff) << (i*8);
+            // load 4 bytes in little endian format.
+            if (cache_enabled) {
+                char target[4];
+                cache_memory.load_memory(registers[rs1]+imm, 4, memory, target);
+                for (int i = 0; i < 4; i++) {
+                    registers[rd] |= (target[i] & 0xff) << (i*8);
+                }
+            }
+            else {
+                for (int i = 0; i < 4; i++) {
+                    registers[rd] |= (memory[registers[rs1]+imm+i] & 0xff) << (i*8);
+                }
             }
             registers[rd]=sign_extend(registers[rd], 32);
                 break;
             case 0x3: // ld case.
-            for (int i = 0; i < 8; i++) {
-                registers[rd] |= (long long)(memory[registers[rs1]+imm+i] & 0xff) << (i*8);
+            // load 8 bytes in little endian format.
+            if (cache_enabled) {
+                char target[8];
+                cache_memory.load_memory(registers[rs1]+imm, 8, memory, target);
+                for (int i = 0; i < 8; i++) {
+                    registers[rd] |= (target[i] & 0xff) << (i*8);
+                }
+            }
+            else {
+                for (int i = 0; i < 8; i++) {
+                    registers[rd] |= (memory[registers[rs1]+imm+i] & 0xff) << (i*8);
+                }
             }
                 break;
             case 0x4: // lbu case.
-                registers[rd] = (unsigned char)memory[registers[rs1] + imm];
+            if (cache_enabled) {
+                char target[1];
+                cache_memory.load_memory(registers[rs1]+imm, 1, memory, target);
+                registers[rd] = target[0];
+            }
+            else {
+                registers[rd] = memory[registers[rs1]+imm];
+            }
                 break;
             case 0x5: // lhu case.
-            for (int i = 0; i < 2; i++) {
-                registers[rd] |= (memory[registers[rs1]+imm+i] & 0xff) << (i*8);
+            // load 2 bytes in little endian format.
+            if (cache_enabled) {
+                char target[2];
+                cache_memory.load_memory(registers[rs1]+imm, 2, memory, target);
+                for (int i = 0; i < 2; i++) {
+                    registers[rd] |= (target[i] & 0xff) << (i*8);
+                }
+            }
+            else {
+                for (int i = 0; i < 2; i++) {
+                    registers[rd] |= (memory[registers[rs1]+imm+i] & 0xff) << (i*8);
+                }
             }
                 break;
             case 0x6: // lwu case.
-            for (int i = 0; i < 4; i++) {
-                registers[rd] |= (memory[registers[rs1]+imm+i] & 0xff) << (i*8);
+            // load 4 bytes in little endian format.
+            if (cache_enabled) {
+                char target[4];
+                cache_memory.load_memory(registers[rs1]+imm, 4, memory, target);
+                for (int i = 0; i < 4; i++) {
+                    registers[rd] |= (target[i] & 0xff) << (i*8);
+                }
+            }
+            else {
+                for (int i = 0; i < 4; i++) {
+                    registers[rd] |= (memory[registers[rs1]+imm+i] & 0xff) << (i*8);
+                }
             }
                 break;
         }
@@ -171,24 +235,58 @@ void execute(int instruction, long long registers[], char memory[], int& pc, vec
         int funct3 = (instruction>>12)&0b111;
         switch (funct3) {
             case 0x0: // sb case.
-                memory[registers[rs1]+imm] = registers[rs2]&0b11111111;
+            if (cache_enabled) {
+                char source[1];
+                source[0] = registers[rs2]&0b11111111;
+                cache_memory.store_memory(registers[rs1]+imm, 1, memory, source);
+            }
+            else {
+                    memory[registers[rs1]+imm] = registers[rs2]&0b11111111;
+            }
                 break;
             case 0x1 : // sh case.
                 // store 2 bytes in little endian format.
-                for (int i = 0; i < 2; i++) {
-                    memory[registers[rs1]+imm+i] = ((unsigned long long)registers[rs2] >> (i*8)) & 0xff;
+                if (cache_enabled) {
+                    char source[2];
+                    for (int i = 0; i < 2; i++) {
+                        source[i] = ((unsigned long long)registers[rs2] >> (i*8)) & 0xff;
+                    }
+                    cache_memory.store_memory(registers[rs1]+imm, 2, memory, source);
+                }
+                else {
+                    for (int i = 0; i < 2; i++) {
+                        memory[registers[rs1]+imm+i] = ((unsigned long long)registers[rs2] >> (i*8)) & 0xff;
+                    }
                 }
                 break;
             case 0x2: // sw case.
             // store 4 bytes in little endian format.
-            for (int i = 0; i < 4; i++) {
-                memory[registers[rs1]+imm+i] = ((unsigned long long)registers[rs2] >> (i*8)) & 0xff;
+            if (cache_enabled) {
+                char source[4];
+                for (int i = 0; i < 4; i++) {
+                    source[i] = ((unsigned long long)registers[rs2] >> (i*8)) & 0xff;
+                }
+                cache_memory.store_memory(registers[rs1]+imm, 4, memory, source);
+            }
+            else {
+                for (int i = 0; i < 4; i++) {
+                    memory[registers[rs1]+imm+i] = ((unsigned long long)registers[rs2] >> (i*8)) & 0xff;
+                }
             }
                 break;
             case 0x3: // sd case.
             // store 8 bytes in little endian format.
-            for (int i = 0; i < 8; i++) {
-                memory[registers[rs1]+imm+i] = ((unsigned long long)registers[rs2] >> (i*8)) & 0xff;
+            if (cache_enabled) {
+                char source[8];
+                for (int i = 0; i < 8; i++) {
+                    source[i] = ((unsigned long long)registers[rs2] >> (i*8)) & 0xff;
+                }
+                cache_memory.store_memory(registers[rs1]+imm, 8, memory, source);
+            }
+            else {
+                for (int i = 0; i < 8; i++) {
+                    memory[registers[rs1]+imm+i] = ((unsigned long long)registers[rs2] >> (i*8)) & 0xff;
+                }
             }
                 break;
         }

@@ -9,6 +9,7 @@
 #include "constants.h"
 #include "preprocessor.h"
 #include "processor.h"
+#include "cache.h"
 
 using namespace std;
 
@@ -26,12 +27,16 @@ int main(int argc, char *argv[]) {
     vector<int> break_line;
     vector<call_item> call_stack; //we are using vector because we have push pop functionality and we can access all the elements.
      initialize_registers();
+        cache cache_memory;
+        bool cache_enabled=false;
+        bool executing=false;
      while (true) { //an infinite loop to take commands from the user.
      regs[0]=0; //x0 is 0 for ever.
         string command;
         cin >> command;
         if(*(int*)(mem+pc) == 0 || pc >= 0x10000){
             call_stack.clear();
+            executing=false;
         }
         if (command == "load") {
             string filename;
@@ -40,6 +45,34 @@ int main(int argc, char *argv[]) {
             break_line.clear();
             call_stack.push_back(call_item("main",0));
         }
+        else if (command == "cache") {
+            string cmd;
+            cin >> cmd;
+                if (cmd == "disable") {
+            if (executing) {
+                cout << "Cannot change cache configuration while executing" << endl;
+                continue;
+            }
+                    cache_enabled=false;
+                    cout << "Cache disabled" << endl;
+                }
+                else if (cmd == "enable") {
+            if (executing) {
+                cout << "Cannot change cache configuration while executing" << endl;
+                continue;
+            }
+                    cache_enabled=true;
+                string configfile;
+                cin >> configfile;
+                config cache_config=config(configfile);
+                cache_memory=cache(cache_config);
+                    cout << "Cache enabled" << endl;
+                }
+                else if (cmd == "status") {
+                    //display number of accesses and hits.
+                    cout << "Accesses: " << cache_memory.get_accesses() << ". Hits: " << cache_memory.get_hits() << endl;
+                }
+        }
         else if (command == "run") {
             if (pc >= 0x10000 || *(int*)(mem+pc) == 0) {
                 cout << "Nothing to run" << endl;
@@ -47,8 +80,11 @@ int main(int argc, char *argv[]) {
             }
             int prev_pc = pc;
             while (pc < 0x10000 && *(int*)(mem+pc) != 0) {
+                if (!executing) {
+                    executing = true;
+                }
                 int instr=*(int*)(mem+pc);
-                execute(instr, regs, mem, pc, lines, line_numbers,labels,call_stack);
+                execute(instr, regs, mem, pc, lines, line_numbers,labels,call_stack,cache_enabled, cache_memory);
                 cout << "Executed " << get_instr(lines[line_numbers[(prev_pc/4)]]) << "; PC=0x" << int_to_hex(prev_pc,8) << endl;
                 prev_pc = pc;
                 //check if any current line after execution matches any breakpoint
@@ -70,9 +106,12 @@ int main(int argc, char *argv[]) {
                 cout << "Nothing to step" << endl;
                 continue;
             }
+            if (!executing) {
+                executing = true;
+            }
             int instr=*(int*)(mem+pc);
             int prev_pc = pc;
-            execute(instr, regs, mem, pc, lines, line_numbers, labels, call_stack);
+            execute(instr, regs, mem, pc, lines, line_numbers, labels, call_stack, cache_enabled, cache_memory);
             cout << "executed " << get_instr(lines[line_numbers[(prev_pc/4)]]) << "; PC=0x" << int_to_hex(prev_pc,8) << endl;
         }
         else if (command == "regs") {
