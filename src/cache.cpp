@@ -175,6 +175,8 @@ void cache::load_memory(int address, size_t nbytes, char* memory, char* target) 
         if (cache_config.get_replacement_policy() == "fifo") {
             i=fifo_full.front();
             fifo_full.pop();
+        } else if (cache_config.get_replacement_policy() == "random") {
+            i = rand() % num_blocks;
         }
             if (blocks[i].get_dirty()) {
                 for (size_t j=0; j<block_size; j++) {
@@ -192,7 +194,7 @@ void cache::load_memory(int address, size_t nbytes, char* memory, char* target) 
             }
             if (cache_config.get_replacement_policy() == "fifo") {
                 fifo_full.push(i);
-            }
+            } 
             return;
     }
     if (associativity == 1) {
@@ -270,6 +272,8 @@ void cache::load_memory(int address, size_t nbytes, char* memory, char* target) 
         if (cache_config.get_replacement_policy() == "fifo") {
             i=fifo_set[index].front();
             fifo_set[index].pop();
+        } else if(cache_config.get_replacement_policy() == "random") {
+            i = rand() % num_blocks;
         }
             if (sets[index][i].get_dirty()) {
                 for (size_t j=0; j<block_size; j++) {
@@ -357,6 +361,8 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
         size_t i;
         if (cache_config.get_replacement_policy() == "fifo") {
             i=fifo_full.front();
+        } else if(cache_config.get_replacement_policy() == "random") {
+            i = rand() % num_blocks;
         }
             if (cache_config.get_write_policy() == "wb") {
                 //if the block is dirty, write it back to memory.
@@ -524,6 +530,8 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
         size_t i;
         if (cache_config.get_replacement_policy() == "fifo") {
             i=fifo_set[index].front();
+        } else if(cache_config.get_replacement_policy() == "random") {
+            i = rand() % num_blocks;
         }
             if (cache_config.get_write_policy() == "wb") {
                 if (sets[index][i].get_dirty() && sets[index][i].get_valid()) {
