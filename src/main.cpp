@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
                 }
                 else if (cmd == "status") {
                     //display number of accesses and hits.
-                    cout << "Accesses: " << cache_memory.get_accesses() << ". Hits: " << cache_memory.get_hits() << endl;
+                    cout << "Accesses: " << dec << cache_memory.get_accesses() << ". Hits: " << cache_memory.get_hits() << endl;
                 }
         }
         else if (command == "run") {

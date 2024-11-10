@@ -5,6 +5,7 @@
 #include<list>
 #include<unordered_map>
 #include<cmath>
+#include<random>
 #include "cache.h"
 
 
@@ -136,9 +137,7 @@ void cache::load_memory(int address, size_t nbytes, char* memory, char* target) 
     unsigned int cache_size = cache_config.get_cache_size();
     unsigned int associativity = cache_config.get_associativity();
     unsigned int num_blocks = cache_size / block_size;
-    unsigned int num_sets = num_blocks / associativity;
     unsigned int offset_bits = log2(block_size);
-    unsigned int index_bits = log2(num_sets);
     unsigned int offset= address & ((1 << offset_bits) - 1);
     if (offset + nbytes > block_size) {
         cerr << "Error: Address out of bounds" << endl;
@@ -172,9 +171,11 @@ void cache::load_memory(int address, size_t nbytes, char* memory, char* target) 
             }
         }
         //in case of cache miss.
+        size_t i;
         if (cache_config.get_replacement_policy() == "fifo") {
-            size_t i=fifo_full.front();
+            i=fifo_full.front();
             fifo_full.pop();
+        }
             if (blocks[i].get_dirty()) {
                 for (size_t j=0; j<block_size; j++) {
                     memory[(blocks[i].get_tag() << offset_bits) + j] = blocks[i].get_data(j);
@@ -189,11 +190,13 @@ void cache::load_memory(int address, size_t nbytes, char* memory, char* target) 
             for (size_t j=0; j<nbytes; j++) {
                 target[j] = blocks[i].get_data(offset + j);
             }
-            fifo_full.push(i);
+            if (cache_config.get_replacement_policy() == "fifo") {
+                fifo_full.push(i);
+            }
             return;
-        }
     }
     if (associativity == 1) {
+    unsigned int index_bits = log2(num_blocks);
         unsigned int index=(address >> offset_bits) & ((1 << index_bits) - 1);
         unsigned int tag=(address >> (offset_bits + index_bits));
         if (blocks[index].get_tag() == tag) {
@@ -240,9 +243,7 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
     unsigned int cache_size = cache_config.get_cache_size();
     unsigned int associativity = cache_config.get_associativity();
     unsigned int num_blocks = cache_size / block_size;
-    unsigned int num_sets = num_blocks / associativity;
     unsigned int offset_bits = log2(block_size);
-    unsigned int index_bits = log2(num_sets);
     unsigned int offset= address & ((1 << offset_bits) - 1);
     if (offset + nbytes > block_size) {
         cerr << "Error: Address out of bounds" << endl;
@@ -299,8 +300,10 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
             }
         }
         //in case of cache miss.
+        size_t i;
         if (cache_config.get_replacement_policy() == "fifo") {
-            size_t i=fifo_full.front();
+            i=fifo_full.front();
+        }
             if (cache_config.get_write_policy() == "wb") {
                 //if the block is dirty, write it back to memory.
                 if (blocks[i].get_dirty()) {
@@ -318,8 +321,10 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
                 blocks[i].set_valid(true);
                 blocks[i].set_dirty(true);
                 blocks[i].set_tag(tag);
-                fifo_full.pop();
-                fifo_full.push(i);
+                if (cache_config.get_replacement_policy() == "fifo") {
+                    fifo_full.pop();
+                    fifo_full.push(i);
+                }
             }
             else { //write through case.
             //update the memory with source.
@@ -328,9 +333,9 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
             }
             }
            return;
-        }
     }
     if (associativity == 1) {
+    unsigned int index_bits = log2(num_blocks);
         unsigned int index=(address >> offset_bits) & ((1 << index_bits) - 1);
         unsigned int tag=(address >> (offset_bits + index_bits));
         if (blocks[index].get_tag() == tag) {
@@ -413,7 +418,6 @@ void cache::clear_cache() {
     unsigned int cache_size = cache_config.get_cache_size();
     unsigned int associativity = cache_config.get_associativity();
     unsigned int num_blocks = cache_size / block_size;
-    unsigned int num_sets = num_blocks / associativity;
     if (associativity == 0) {
         for (size_t i=0; i<num_blocks; i++) {
             blocks[i].set_valid(false);
@@ -422,18 +426,31 @@ void cache::clear_cache() {
         }
     }
     if (associativity == 1) {
-        for (size_t i=0; i<num_sets; i++) {
+        for (size_t i=0; i<num_blocks; i++) {
             blocks[i].set_valid(false);
             blocks[i].set_dirty(false);
             blocks[i].set_tag(0);
         }
     }
     if (associativity > 1) {
+    unsigned int num_sets = num_blocks / associativity;
         for (size_t i=0; i<num_sets; i++) {
             for (size_t j=0; j<associativity; j++) {
                 sets[i][j].set_valid(false);
                 sets[i][j].set_dirty(false);
                 sets[i][j].set_tag(0);
+            }
+        }
+    }
+    hits = 0;
+    accesses = 0;
+    if (cache_config.get_replacement_policy() == "fifo") {
+        while (!fifo_full.empty()) {
+            fifo_full.pop();
+        }
+        for (size_t i=0; i<fifo_set.size(); i++) {
+            while (!fifo_set[i].empty()) {
+                fifo_set[i].pop();
             }
         }
     }
