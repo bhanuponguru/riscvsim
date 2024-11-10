@@ -120,9 +120,6 @@ cache::cache(config c) {
         if (c.get_replacement_policy() == "fifo") {
             fifo_set.resize(c.get_cache_size() / c.get_block_size());
         }
-        else if (c.get_replacement_policy() == "lru") {
-            lru_set.resize(c.get_cache_size() / c.get_block_size());
-        }
     }
 }
 
