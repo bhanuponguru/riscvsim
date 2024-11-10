@@ -236,6 +236,60 @@ void cache::load_memory(int address, size_t nbytes, char* memory, char* target) 
         }
         return;
     }
+    if (associativity > 1) {
+    unsigned int num_sets = num_blocks / associativity;
+        unsigned int index_bits = log2(num_sets);
+        unsigned int index=(address >> offset_bits) & ((1 << index_bits) - 1);
+        unsigned int tag=(address >> (offset_bits + index_bits));
+        for (size_t i=0; i<associativity; i++) {
+            if (sets[index][i].get_tag() == tag) {
+                if (sets[index][i].get_valid()) {
+                    ++hits;
+                    for (size_t j=0; j<nbytes; j++) {
+                        target[j] = sets[index][i].get_data(offset + j);
+                    }
+                } else {
+                    for (size_t j=0; j<block_size; j++) {
+                        sets[index][i].set_data(memory[address - offset + j], j);
+                    }
+                    sets[index][i].set_valid(true);
+                    sets[index][i].set_dirty(false);
+                    sets[index][i].set_tag(tag);
+                    for (size_t j=0; j<nbytes; j++) {
+                        target[j] = sets[index][i].get_data(offset + j);
+                    }
+                }
+                if (cache_config.get_replacement_policy() == "fifo") {
+                    fifo_set[index].push(i);
+                }
+                return;
+            }
+        }
+        //in case of cache miss.
+        size_t i;
+        if (cache_config.get_replacement_policy() == "fifo") {
+            i=fifo_set[index].front();
+            fifo_set[index].pop();
+        }
+            if (sets[index][i].get_dirty()) {
+                for (size_t j=0; j<block_size; j++) {
+                    memory[(sets[index][i].get_tag() << (offset_bits + index_bits)) + (index << offset_bits) + j] = sets[index][i].get_data(j);
+                }
+            }
+            for (size_t j=0; j<block_size; j++) {
+                sets[index][i].set_data(memory[address - offset + j], j);
+            }
+            sets[index][i].set_valid(true);
+            sets[index][i].set_dirty(false);
+            sets[index][i].set_tag(tag);
+            for (size_t j=0; j<nbytes; j++) {
+                target[j] = sets[index][i].get_data(offset + j);
+            }
+            if (cache_config.get_replacement_policy() == "fifo") {
+                fifo_set[index].push(i);
+            }
+            return;
+    }
 }
 
 void cache::store_memory(int address, size_t nbytes, char* memory, char* source) {
@@ -409,6 +463,96 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
         }
         }
         return;
+    }
+    if (associativity > 1) {
+    unsigned int num_sets = num_blocks / associativity;
+        unsigned int index_bits = log2(num_sets);
+        unsigned int index=(address >> offset_bits) & ((1 << index_bits) - 1);
+        unsigned int tag=(address >> (offset_bits + index_bits));
+        for (size_t i=0; i<associativity; i++) {
+            if (sets[index][i].get_tag() == tag) {
+                if (sets[index][i].get_valid()) {
+                    ++hits;
+                    if (cache_config.get_write_policy() == "wb") {
+                        for (size_t j=0; j<nbytes; j++) {
+                            sets[index][i].set_data(source[j], offset + j);
+                        }
+                        sets[index][i].set_valid(true);
+                        sets[index][i].set_dirty(true);
+                        sets[index][i].set_tag(tag);
+                    }
+                    else { //write through case.
+                        for (size_t j=0; j<nbytes; j++) {
+                            sets[index][i].set_data(source[j], offset + j);
+                        }
+                        for (size_t j=0; j<block_size; j++) {
+                            memory[address - offset + j] = sets[index][i].get_data(j);
+                        }
+                        sets[index][i].set_valid(true);
+                        sets[index][i].set_dirty(false);
+                        sets[index][i].set_tag(tag);
+                    }
+                }
+                else {
+                    if (cache_config.get_write_policy() == "wb") {
+                    //fetch the latest data from memory.
+                    for (size_t j=0; j<block_size; j++) {
+                        sets[index][i].set_data(memory[(tag << offset_bits) + j], j);
+                    }
+                    //store the source in to the block.
+                    for (size_t j=0; j<nbytes; j++) {
+                        sets[index][i].set_data(source[j], offset + j);
+                    }
+                    sets[index][i].set_valid(true);
+                    sets[index][i].set_dirty(true);
+                    sets[index][i].set_tag(tag);
+                    }
+                    else { //write through case.
+                    //update the memory with source.
+                    for (size_t j=0; j<nbytes; j++) {
+                        memory[address - offset + j] = source[j];
+                    }
+                    }
+                }
+                if (cache_config.get_replacement_policy() == "fifo" && sets[index][i].get_valid()) {
+                    fifo_set[index].push(i);
+                }
+                return;
+            }
+        }
+        //in case of cache miss.
+        size_t i;
+        if (cache_config.get_replacement_policy() == "fifo") {
+            i=fifo_set[index].front();
+        }
+            if (cache_config.get_write_policy() == "wb") {
+                if (sets[index][i].get_dirty() && sets[index][i].get_valid()) {
+                    for (size_t j=0; j<block_size; j++) {
+                        memory[(sets[index][i].get_tag() << (offset_bits + index_bits)) + (index << offset_bits) + j] = sets[index][i].get_data(j);
+                    }
+                }
+                //fetch the latest data from memory.
+                for (size_t j=0; j<block_size; j++) {
+                    sets[index][i].set_data(memory[(tag << offset_bits) + j], j);
+                }
+                for (size_t j=0; j<nbytes; j++) {
+                    sets[index][i].set_data(source[j], offset + j);
+                }
+                sets[index][i].set_valid(true);
+                sets[index][i].set_dirty(true);
+                sets[index][i].set_tag(tag);
+                if (cache_config.get_replacement_policy() == "fifo") {
+                    fifo_set[index].pop();
+                    fifo_set[index].push(i);
+                }
+            }
+            else { //write through case.
+            //update the memory with source.
+            for (size_t j=0; j<nbytes; j++) {
+                memory[address - offset + j] = source[j];
+            }
+            }
+            return;
     }
 }
 
