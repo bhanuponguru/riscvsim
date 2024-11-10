@@ -50,6 +50,8 @@ class cache {
     config cache_config;
 queue<size_t> fifo_full; //this is to store blocks in fully associative cache in case of fifo. this stores index to the block.
 vector<queue<size_t>> fifo_set; //this is to store blocks in set associative cache in case of fifo.
+list<size_t> lru_list;
+vector<list<size_t>> lru_list_set;
     int accesses;
     int hits;
 public:
