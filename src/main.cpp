@@ -44,6 +44,10 @@ int main(int argc, char *argv[]) {
             load_from_file(filename, mem, regs, pc, labels, line_numbers, lines);
             break_line.clear();
             call_stack.push_back(call_item("main",0));
+            executing=false;
+            if (cache_enabled) {
+                cache_memory.clear_cache();
+            }
         }
         else if (command == "cache") {
             string cmd;

@@ -117,6 +117,12 @@ cache::cache(config c) {
                 sets[i][j] = block(c.get_block_size());
             }
         }
+        if (c.get_replacement_policy() == "fifo") {
+            fifo_set.resize(c.get_cache_size() / c.get_block_size());
+        }
+        else if (c.get_replacement_policy() == "lru") {
+            lru_set.resize(c.get_cache_size() / c.get_block_size());
+        }
     }
 }
 
@@ -251,27 +257,30 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
         for (size_t i=0; i<num_blocks; i++) {
             if (blocks[i].get_tag() == tag) {
                 if (blocks[i].get_valid()) {
+                    ++hits;
                     if (cache_config.get_write_policy() == "wb") {
-                        if (blocks[i].get_dirty()) {
-                            for (size_t j=0; j<block_size; j++) {
-                                memory[(blocks[i].get_tag() << offset_bits) + j] = blocks[i].get_data(j);
-                            }
-                        }
-                        else { //this will be a hit since we dont need to write back to memory.
-                        ++hits;
-                        }
-                    }
-                    else { //write through case.
                         for (size_t j=0; j<nbytes; j++) {
                             blocks[i].set_data(source[j], offset + j);
                         }
+                        blocks[i].set_valid(true);
+                        blocks[i].set_dirty(true);
+                        blocks[i].set_tag(tag);
+                    }
+                    else { //write through case.
                         for (size_t j=0; j<block_size; j++) {
                             memory[address - offset + j] = blocks[i].get_data(j);
+                        }
+                        for (size_t j=0; j<nbytes; j++) {
+                            blocks[i].set_data(source[j], offset + j);
                         }
                     }
                 }
                 else {
-                    if (cache_config.get_write_policy() == "wb") { //since the bit is not valid, we dont need to care if it's dirty or not.
+                    if (cache_config.get_write_policy() == "wb") {
+                        //fetch the latest data from memory.
+                        for (size_t j=0; j<block_size; j++) {
+                            blocks[i].set_data(memory[(tag << offset_bits) + j], j);
+                        }
                     for (size_t j=0; j<nbytes; j++) {
                         blocks[i].set_data(source[j], offset + j);
                     }
@@ -280,18 +289,13 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
                     blocks[i].set_tag(tag);
                     }
                     else { //write through case.
-                        for (size_t j=0; j<nbytes; j++) {
-                            blocks[i].set_data(source[j], offset + j);
-                        }
-                        for (size_t j=0; j<block_size; j++) {
-                            memory[address - offset + j] = blocks[i].get_data(j);
-                        }
-                        blocks[i].set_valid(true);
-                        blocks[i].set_dirty(false);
-                        blocks[i].set_tag(tag);
+                    //update the memory with source.
+                    for (size_t j=0; j<nbytes; j++) {
+                        memory[address - offset + j] = source[j];
+                    }
                     }
                 }
-                if (cache_config.get_replacement_policy() == "fifo") {
+                if (cache_config.get_replacement_policy() == "fifo" && blocks[i].get_valid()) {
                     fifo_full.push(i);
                 }
                 return;
@@ -300,15 +304,16 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
         //in case of cache miss.
         if (cache_config.get_replacement_policy() == "fifo") {
             size_t i=fifo_full.front();
-            fifo_full.pop();
             if (cache_config.get_write_policy() == "wb") {
+                //if the block is dirty, write it back to memory.
                 if (blocks[i].get_dirty()) {
                     for (size_t j=0; j<block_size; j++) {
                         memory[(blocks[i].get_tag() << offset_bits) + j] = blocks[i].get_data(j);
                     }
                 }
-                else { //this will be a hit since we dont need to write back to memory.
-                ++hits;
+                //fetch the latest data from memory.
+                for (size_t j=0; j<block_size; j++) {
+                    blocks[i].set_data(memory[(blocks[i].get_tag() << offset_bits) + j], j);
                 }
                 for (size_t j=0; j<block_size; j++) {
                     blocks[i].set_data(source[j], j);
@@ -316,19 +321,15 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
                 blocks[i].set_valid(true);
                 blocks[i].set_dirty(true);
                 blocks[i].set_tag(tag);
+                fifo_full.pop();
+                fifo_full.push(i);
             }
             else { //write through case.
-                for (size_t j=0; j<block_size; j++) {
-                    blocks[i].set_data(source[j], j);
-                }
-                for (size_t j=0; j<block_size; j++) {
-                    memory[address - offset + j] = blocks[i].get_data(j);
-                }
-                blocks[i].set_valid(true);
-                blocks[i].set_dirty(false);
-                blocks[i].set_tag(tag);
+            //update the memory with source.
+            for (size_t j=0; j<nbytes; j++) {
+                memory[address - offset + j] = source[j];
             }
-            fifo_full.push(i);
+            }
            return;
         }
     }
@@ -337,15 +338,8 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
         unsigned int tag=(address >> (offset_bits + index_bits));
         if (blocks[index].get_tag() == tag) {
             if (blocks[index].get_valid()) {
+                ++hits;
                 if (cache_config.get_write_policy() == "wb") {
-                    if (blocks[index].get_dirty()) {
-                        for (size_t j=0; j<block_size; j++) {
-                            memory[(blocks[index].get_tag() << (offset_bits + index_bits)) + (index << offset_bits) + j] = blocks[index].get_data(j);
-                        }
-                    }
-                    else { //this will be a hit since we dont need to write back to memory.
-                    ++hits;
-                    }
                     for (size_t j=0; j<nbytes; j++) {
                         blocks[index].set_data(source[j], offset + j);
                     }
@@ -366,7 +360,11 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
                 }
             }
             else {
-                if (cache_config.get_write_policy() == "wb") { //since the bit is not valid, we dont need to care if it's dirty or not.
+                if (cache_config.get_write_policy() == "wb") {
+                //fetch the latest data from memory.
+                for (size_t j=0; j<block_size; j++) {
+                    blocks[index].set_data(memory[(tag << offset_bits) + j], j);
+                }
                 //store the source in to the block.
                 for (size_t j=0; j<nbytes; j++) {
                     blocks[index].set_data(source[j], offset + j);
@@ -376,28 +374,24 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
                 blocks[index].set_tag(tag);
                 }
                 else { //write through case.
-                    for (size_t j=0; j<nbytes; j++) {
-                        blocks[index].set_data(source[j], offset + j);
-                    }
-                    for (size_t j=0; j<block_size; j++) {
-                        memory[address - offset + j] = blocks[index].get_data(j);
-                    }
-                    blocks[index].set_valid(true);
-                    blocks[index].set_dirty(false);
-                    blocks[index].set_tag(tag);
+                //update the memory with source.
+                for (size_t j=0; j<nbytes; j++) {
+                    memory[address - offset + j] = source[j];
+                }
                 }
             }
             return;
         }
         //in case of cache miss. there is no need of replacement policy in case of direct mapped cache.
         if (cache_config.get_write_policy() == "wb") {
-            if (blocks[index].get_dirty()) {
+            if (blocks[index].get_dirty() && blocks[index].get_valid()) {
                 for (size_t j=0; j<block_size; j++) {
                     memory[(blocks[index].get_tag() << (offset_bits + index_bits)) + (index << offset_bits) + j] = blocks[index].get_data(j);
                 }
             }
-            else { //this will be a hit since we dont need to write back to memory.
-            ++hits;
+            //fetch the latest data from memory.
+            for (size_t j=0; j<block_size; j++) {
+                blocks[index].set_data(memory[(tag << offset_bits) + j], j);
             }
             for (size_t j=0; j<nbytes; j++) {
                 blocks[index].set_data(source[j], offset + j);
@@ -407,17 +401,43 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
             blocks[index].set_tag(tag);
         }
         else { //write through case.
-            for (size_t j=0; j<nbytes; j++) {
-                blocks[index].set_data(source[j], offset + j);
-            }
-            for (size_t j=0; j<block_size; j++) {
-                memory[address - offset + j] = blocks[index].get_data(j);
-            }
-            blocks[index].set_valid(true);
-            blocks[index].set_dirty(false);
-            blocks[index].set_tag(tag);
+        //update the memory with source.
+        for (size_t j=0; j<nbytes; j++) {
+            memory[address - offset + j] = source[j];
+        }
         }
         return;
     }
 }
 
+
+void cache::clear_cache() {
+    unsigned int block_size = cache_config.get_block_size();
+    unsigned int cache_size = cache_config.get_cache_size();
+    unsigned int associativity = cache_config.get_associativity();
+    unsigned int num_blocks = cache_size / block_size;
+    unsigned int num_sets = num_blocks / associativity;
+    if (associativity == 0) {
+        for (size_t i=0; i<num_blocks; i++) {
+            blocks[i].set_valid(false);
+            blocks[i].set_dirty(false);
+            blocks[i].set_tag(0);
+        }
+    }
+    if (associativity == 1) {
+        for (size_t i=0; i<num_sets; i++) {
+            blocks[i].set_valid(false);
+            blocks[i].set_dirty(false);
+            blocks[i].set_tag(0);
+        }
+    }
+    if (associativity > 1) {
+        for (size_t i=0; i<num_sets; i++) {
+            for (size_t j=0; j<associativity; j++) {
+                sets[i][j].set_valid(false);
+                sets[i][j].set_dirty(false);
+                sets[i][j].set_tag(0);
+            }
+        }
+    }
+}

@@ -49,9 +49,7 @@ class cache {
     vector<vector<block>> sets;
     config cache_config;
 queue<size_t> fifo_full; //this is to store blocks in fully associative cache in case of fifo. this stores index to the block.
-vector<queue<block*>> fifo_set; //this is to store blocks in set associative cache in case of fifo.
-unordered_map<block*, list<block*>::iterator> lru_full; //this is to store blocks in fully associative cache in case of lru.
-vector<unordered_map<block*, list<block*>::iterator>> lru_set; //this is to store blocks in set associative cache in case of lru.
+vector<queue<size_t>> fifo_set; //this is to store blocks in set associative cache in case of fifo.
     int accesses;
     int hits;
 public:
@@ -61,4 +59,5 @@ void load_memory(int address, size_t nbytes, char* memory, char* target);
 void store_memory(int address, size_t nbytes, char* memory, char* source);
 int get_accesses();
 int get_hits();
+void clear_cache();
 };
