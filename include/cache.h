@@ -61,5 +61,7 @@ void load_memory(int address, size_t nbytes, char* memory, char* target);
 void store_memory(int address, size_t nbytes, char* memory, char* source);
 int get_accesses();
 int get_hits();
-void clear_cache();
+void clear_cache(bool invalidate = false);
+void dump(string filename);
+config get_config();
 };

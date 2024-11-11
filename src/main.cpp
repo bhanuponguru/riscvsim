@@ -49,14 +49,14 @@ int main(int argc, char *argv[]) {
                 cache_memory.clear_cache();
             }
         }
-        else if (command == "cache") {
+        else if (command == "cache_sim") {
             string cmd;
             cin >> cmd;
                 if (cmd == "disable") {
             if (executing) {
                 cout << "Cannot change cache configuration while executing" << endl;
                 continue;
-            }
+            } 
                     cache_enabled=false;
                     cout << "Cache disabled" << endl;
                 }
@@ -72,10 +72,36 @@ int main(int argc, char *argv[]) {
                 cache_memory=cache(cache_config);
                     cout << "Cache enabled" << endl;
                 }
-                else if (cmd == "status") {
+                else if (cmd == "stats") {
                     //display number of accesses and hits.
-                    cout << "Accesses: " << dec << cache_memory.get_accesses() << ". Hits: " << cache_memory.get_hits() << endl;
+                    cout << " D-cache statistics: " << "Accesses= " << dec << cache_memory.get_accesses() << ", Hit=" << cache_memory.get_hits() << ", Miss=" << ( cache_memory.get_accesses() - cache_memory.get_hits() ) << ", Hit Rate="<<( float(cache_memory.get_hits()) / float(cache_memory.get_accesses()) )<< endl;
+                } 
+                else if (cmd == "status") {
+                    if (!cache_enabled) {
+                        cout << "cache is disabled" << endl;
+                    } else {
+                        config cache_config;
+                        cache_config = cache_memory.get_config();
+                        cout << "Cache Size: " << cache_config.get_cache_size() << endl;
+                        cout << "Block Size: " << cache_config.get_block_size() << endl;
+                        cout << "Associativity: " << cache_config.get_associativity() << endl;
+                        cout << "Replacement Policy: " << cache_config.get_replacement_policy() << endl;
+                        cout << "Write Back Policy: " << cache_config.get_write_policy() << endl;
+                    }
+                } 
+                else if (cmd == "invalidate") {
+                    cache_memory.clear_cache(true);
                 }
+                else if (cmd == "dump") {
+                    string myFile;
+                    cin >> myFile;
+                    if (!cache_enabled) {
+                        cerr << "Cache should be enabled. Cannot dump cache data" << endl;
+                    } else {
+                        cache_memory.dump(myFile);
+                    }
+                }
+                
         }
         else if (command == "run") {
             if (pc >= 0x10000 || *(int*)(mem+pc) == 0) {

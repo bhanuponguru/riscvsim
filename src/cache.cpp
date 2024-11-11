@@ -75,6 +75,10 @@ config::config(string configfile) {
     file.close();
 }
 
+config cache::get_config() {
+    return cache_config;
+}
+
 int config::get_cache_size() {
     return cache_size;
 }
@@ -729,8 +733,29 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
     }
 }
 
+void cache::dump(string filename) {
+    unsigned int associativity = cache_config.get_associativity();
+    ofstream output_file(filename);
 
-void cache::clear_cache() {
+    if (associativity <= 1) {
+        for (size_t i =0; i < blocks.size(); i++) {
+            if (blocks[i].get_valid()) {
+                output_file << "Set: 0x" << hex << i << "," << "Tag: 0x" << blocks[i].get_tag() << "," << (blocks[i].get_dirty() ? "Dirty" : "Clean") << endl;
+            }
+        }
+    } else {
+        for (size_t i = 0; i < sets.size(); i++) {
+            for (size_t j = 0; j < associativity; j++) {
+                if (sets[i][j].get_valid()) {
+                    output_file << "Set: 0x" << hex << i << "," << "Tag: 0x" << sets[i][j].get_tag() << "," << (sets[i][j].get_dirty() ? "Dirty" : "Clean") << endl;
+                }
+            }
+        }
+    }
+    output_file.close();
+}
+
+void cache::clear_cache(bool invalidate) {
     unsigned int block_size = cache_config.get_block_size();
     unsigned int cache_size = cache_config.get_cache_size();
     unsigned int associativity = cache_config.get_associativity();
@@ -759,8 +784,10 @@ void cache::clear_cache() {
             }
         }
     }
+    if(!invalidate) {
     hits = 0;
     accesses = 0;
+    }
     if (cache_config.get_replacement_policy() == "fifo") {
         while (!fifo_full.empty()) {
             fifo_full.pop();
