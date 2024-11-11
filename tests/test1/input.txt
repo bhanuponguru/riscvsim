@@ -1,0 +1,6 @@
+cache-sim enable tests/test1/config.txt
+load tests/test1/test.s
+run
+cache-sim status
+cache-sim stats
+exit

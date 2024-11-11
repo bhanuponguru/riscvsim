@@ -1,0 +1,5 @@
+cache enable tests/test2/config.txt
+load tests/test2/test.s
+run
+cache status
+exit

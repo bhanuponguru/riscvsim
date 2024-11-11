@@ -167,8 +167,21 @@ void cache::load_memory(int address, size_t nbytes, char* memory, char* target) 
                     }
                 }
                 if (cache_config.get_replacement_policy() == "fifo") {
-                    fifo_full.push(i);
-                } else if(cache_config.get_replacement_policy() == "lru") {
+                    queue<size_t> temp=fifo_full;
+                    bool found=false;
+                    while (!temp.empty()) {
+                        if (temp.front() == i) {
+                            temp.pop();
+                            found=true;
+                            break;
+                        }
+                        temp.pop();
+                    }
+                    if (!found) {
+                        fifo_full.push(i);
+                    }
+                }
+                else if(cache_config.get_replacement_policy() == "lru") {
                     auto it = find(lru_list.begin(), lru_list.end(),i);
                     if( it!= lru_list.end()) {
                         lru_list.erase(it);
@@ -180,14 +193,30 @@ void cache::load_memory(int address, size_t nbytes, char* memory, char* target) 
         }
         //in case of cache miss.
         size_t i;
-        if (cache_config.get_replacement_policy() == "fifo") {
-            i=fifo_full.front();
-            fifo_full.pop();
-        } else if (cache_config.get_replacement_policy() == "random") {
-            i = rand() % num_blocks;
-        } else if (cache_config.get_replacement_policy() == "lru") {
-            i = lru_list.back();
-            lru_list.pop_back();
+        bool found=false;
+        for (size_t j=0; j<num_blocks; j++) {
+            if (!blocks[j].get_valid()) {
+                i=j;
+                found=true;
+                break;
+            }
+        }
+        if (!found) {
+            if (cache_config.get_replacement_policy() == "fifo") {
+                i=fifo_full.front();
+                if (!fifo_full.empty()) {
+                    fifo_full.pop();
+                }
+            }
+            else if (cache_config.get_replacement_policy() == "random") {
+                i = rand() % num_blocks;
+            }
+            else if (cache_config.get_replacement_policy() == "lru") {
+                i = lru_list.back();
+                if (!lru_list.empty()) {
+                    lru_list.pop_back();
+                }
+            }
         }
             if (blocks[i].get_dirty()) {
                 for (size_t j=0; j<block_size; j++) {
@@ -205,7 +234,8 @@ void cache::load_memory(int address, size_t nbytes, char* memory, char* target) 
             }
             if (cache_config.get_replacement_policy() == "fifo") {
                 fifo_full.push(i);
-            } else if (cache_config.get_replacement_policy() == "lru") {
+            }
+            else if (cache_config.get_replacement_policy() == "lru") {
                 lru_list.push_front(i);
             }
             return;
@@ -275,8 +305,21 @@ void cache::load_memory(int address, size_t nbytes, char* memory, char* target) 
                     }
                 }
                 if (cache_config.get_replacement_policy() == "fifo") {
-                    fifo_set[index].push(i);
-                } else if(cache_config.get_replacement_policy() == "lru") {
+                    queue<size_t> temp=fifo_set[index];
+                    bool found=false;
+                    while (!temp.empty()) {
+                        if (temp.front() == i) {
+                            temp.pop();
+                            found=true;
+                            break;
+                        }
+                        temp.pop();
+                    }
+                    if (!found) {
+                        fifo_set[index].push(i);
+                    }
+                }
+                else if(cache_config.get_replacement_policy() == "lru") {
                     auto it = find(lru_list_set[index].begin(), lru_list_set[index].end(),i);
                     if( it!= lru_list_set[index].end()) {
                         lru_list_set[index].erase(it);
@@ -288,14 +331,30 @@ void cache::load_memory(int address, size_t nbytes, char* memory, char* target) 
         }
         //in case of cache miss.
         size_t i;
-        if (cache_config.get_replacement_policy() == "fifo") {
-            i=fifo_set[index].front();
-            fifo_set[index].pop();
-        } else if(cache_config.get_replacement_policy() == "random") {
-            i = rand() % num_blocks;
-        } else if(cache_config.get_replacement_policy() == "lru") {
-            i = lru_list_set[index].back();
-            lru_list_set.pop_back();
+        bool found=false;
+        for (size_t j=0; j<associativity; j++) {
+            if (!sets[index][j].get_valid()) {
+                i=j;
+                found=true;
+                break;
+            }
+        }
+        if (!found) {
+            if (cache_config.get_replacement_policy() == "fifo") {
+                i=fifo_set[index].front();
+                if (!fifo_set[index].empty()) {
+                    fifo_set[index].pop();
+                }
+            }
+            else if(cache_config.get_replacement_policy() == "random") {
+                i = rand() % num_blocks;
+            }
+            else if(cache_config.get_replacement_policy() == "lru") {
+                i = lru_list_set[index].back();
+                if (!lru_list_set[index].empty()) {
+                    lru_list_set[index].pop_back();
+                }
+            }
         }
             if (sets[index][i].get_dirty()) {
                 for (size_t j=0; j<block_size; j++) {
@@ -313,7 +372,8 @@ void cache::load_memory(int address, size_t nbytes, char* memory, char* target) 
             }
             if (cache_config.get_replacement_policy() == "fifo") {
                 fifo_set[index].push(i);
-            } else if (cache_config.get_replacement_policy() == "lru") {
+            }
+            else if (cache_config.get_replacement_policy() == "lru") {
                 lru_list_set[index].push_front(i);
             }
             return;
@@ -376,8 +436,21 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
                     }
                 }
                 if (cache_config.get_replacement_policy() == "fifo" && blocks[i].get_valid()) {
-                    fifo_full.push(i);
-                } else if(cache_config.get_replacement_policy() == "lru" && blocks[i].get_valid()) {
+                    queue<size_t> temp=fifo_full;
+                    bool found=false;
+                    while (!temp.empty()) {
+                        if (temp.front() == i) {
+                            temp.pop();
+                            found=true;
+                            break;
+                        }
+                        temp.pop();
+                    }
+                    if (!found) {
+                        fifo_full.push(i);
+                    }
+                }
+                else if(cache_config.get_replacement_policy() == "lru" && blocks[i].get_valid()) {
                     auto it = find(lru_list.begin(), lru_list.end(),i);
                     if( it!= lru_list.end()) {
                         lru_list.erase(it);
@@ -389,12 +462,24 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
         }
         //in case of cache miss.
         size_t i;
+        bool found=false;
+        for (size_t j=0; j<num_blocks; j++) {
+            if (!blocks[j].get_valid()) {
+                i=j;
+                found=true;
+                break;
+            }
+        }
+        if (!found) {
         if (cache_config.get_replacement_policy() == "fifo") {
             i=fifo_full.front();
-        } else if(cache_config.get_replacement_policy() == "random") {
+        }
+        else if(cache_config.get_replacement_policy() == "random") {
             i = rand() % num_blocks;
-        } else if(cache_config.get_replacement_policy() == "lru") {
+        }
+        else if(cache_config.get_replacement_policy() == "lru") {
             i = lru_list.back();
+        }
         }
             if (cache_config.get_write_policy() == "wb") {
                 //if the block is dirty, write it back to memory.
@@ -414,10 +499,15 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
                 blocks[i].set_dirty(true);
                 blocks[i].set_tag(tag);
                 if (cache_config.get_replacement_policy() == "fifo") {
-                    fifo_full.pop();
+                    if (!fifo_full.empty() && !found) {
+                        fifo_full.pop();
+                    }
                     fifo_full.push(i);
-                } else if (cache_config.get_replacement_policy() == "lru") {
-                    lru_list.pop_back();
+                }
+                else if (cache_config.get_replacement_policy() == "lru") {
+                    if (!lru_list.empty() && !found) {
+                        lru_list.pop_back();
+                    }
                     lru_list.push_front(i);
                 }
             }
@@ -556,8 +646,21 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
                     }
                 }
                 if (cache_config.get_replacement_policy() == "fifo" && sets[index][i].get_valid()) {
-                    fifo_set[index].push(i);
-                } else if (cache_config.get_replacement_policy() == "lru" && sets[index][i].get_valid()) {
+                    queue<size_t> temp=fifo_set[index];
+                    bool found=false;
+                    while (!temp.empty()) {
+                        if (temp.front() == i) {
+                            temp.pop();
+                            found=true;
+                            break;
+                        }
+                        temp.pop();
+                    }
+                    if (!found) {
+                        fifo_set[index].push(i);
+                    }
+                }
+                else if (cache_config.get_replacement_policy() == "lru" && sets[index][i].get_valid()) {
                     auto it = find(lru_list_set[index].begin(), lru_list_set[index].end(),i);
                     if( it!= lru_list_set[index].end()) {
                         lru_list_set[index].erase(it);
@@ -569,12 +672,23 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
         }
         //in case of cache miss.
         size_t i;
+        bool found=false;
+        for (size_t j=0; j<associativity; j++) {
+            if (!sets[index][j].get_valid()) {
+                i=j;
+                found=true;
+                break;
+            }
+        }
+        if (!found) {
         if (cache_config.get_replacement_policy() == "fifo") {
             i=fifo_set[index].front();
-        } else if(cache_config.get_replacement_policy() == "random") {
+        }
+        else if(cache_config.get_replacement_policy() == "random") {
             i = rand() % num_blocks;
         } else if(cache_config.get_replacement_policy() == "lru") {
             i = lru_list_set[index].back();
+        }
         }
             if (cache_config.get_write_policy() == "wb") {
                 if (sets[index][i].get_dirty() && sets[index][i].get_valid()) {
@@ -593,10 +707,15 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
                 sets[index][i].set_dirty(true);
                 sets[index][i].set_tag(tag);
                 if (cache_config.get_replacement_policy() == "fifo") {
-                    fifo_set[index].pop();
+                    if (!fifo_set[index].empty() && !found) {
+                        fifo_set[index].pop();
+                    }
                     fifo_set[index].push(i);
-                } else if(cache_config.get_replacement_policy() == "lru") {
-                    lru_list_set[index].pop_back();
+                }
+                else if(cache_config.get_replacement_policy() == "lru" && !found) {
+                    if (!lru_list_set[index].empty()) {
+                        lru_list_set[index].pop_back();
+                    }
                     lru_list_set[index].push_front(i);
                 }
             }
