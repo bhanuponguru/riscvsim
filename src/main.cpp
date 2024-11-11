@@ -11,7 +11,7 @@
 #include "processor.h"
 #include "cache.h"
 #include <iomanip>
-
+#include <algorithm>
 using namespace std;
 
 
@@ -31,17 +31,30 @@ int main(int argc, char *argv[]) {
         cache cache_memory;
         bool cache_enabled=false;
         bool executing=false;
+        string fname;
      while (true) { //an infinite loop to take commands from the user.
      regs[0]=0; //x0 is 0 for ever.
-        string command;
-        cin >> command;
-        if(*(int*)(mem+pc) == 0 || pc >= 0x10000){
+     if( ( ( *(int*)(mem+pc) == 0 ) ||  (pc >= 0x10000) ) && (executing)  ) {
             call_stack.clear();
             executing=false;
+            if(cache_enabled) {
+                ofstream os(fname + ".output");
+                os << cache_memory.get_output();
+                os.close();
+            }
         }
+        string command;
+        cin >> command;
         if (command == "load") {
             string filename;
             cin >> filename;
+            fname = filename;
+            if (fname.find('.') < fname.length()) {
+                while (fname[fname.length() - 1] != '.'){
+                    fname.pop_back();
+                }
+                fname.pop_back();
+            }
             load_from_file(filename, mem, regs, pc, labels, line_numbers, lines);
             break_line.clear();
             call_stack.push_back(call_item("main",0));
@@ -129,6 +142,9 @@ int main(int argc, char *argv[]) {
                 cout << "Execution stopped at breakpoint" << endl;
                 break;
                }
+            }
+            if(cache_enabled) {
+            cout << " D-cache statistics: " << "Accesses= " << dec << cache_memory.get_accesses() << ", Hit=" << cache_memory.get_hits() << ", Miss=" << ( cache_memory.get_accesses() - cache_memory.get_hits() ) << ", Hit Rate="<<( float(cache_memory.get_hits()) / float(cache_memory.get_accesses()) )<< endl;
             }
         }
         else if (command == "step") {

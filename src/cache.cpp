@@ -8,7 +8,8 @@
 #include<random>
 #include "cache.h"
 #include<algorithm>
-
+#include <sstream>
+#include <iomanip>
 using namespace std;
 
 
@@ -99,6 +100,10 @@ string config::get_write_policy() {
     return write_policy;
 }
 
+string cache::get_output() {
+    return output;
+}
+
 cache::cache() {
     accesses = 0;
     hits = 0;
@@ -145,6 +150,7 @@ void cache::load_memory(int address, size_t nbytes, char* memory, char* target) 
     unsigned int num_blocks = cache_size / block_size;
     unsigned int offset_bits = log2(block_size);
     unsigned int offset= address & ((1 << offset_bits) - 1);
+    bool Hit = false;
     if (offset + nbytes > block_size) {
         cerr << "Error: Address out of bounds" << endl;
         exit(1);
@@ -156,6 +162,7 @@ void cache::load_memory(int address, size_t nbytes, char* memory, char* target) 
             if (blocks[i].get_tag() == tag) {
                 if (blocks[i].get_valid()) {
                     ++hits;
+                    Hit = true;
                     for (size_t j=0; j<nbytes; j++) {
                         target[j] = blocks[i].get_data(offset + j);
                     }
@@ -192,6 +199,11 @@ void cache::load_memory(int address, size_t nbytes, char* memory, char* target) 
                     }
                     lru_list.push_front(i);
                 }
+                string temp;
+                ostringstream out(temp);
+                out << "R: " << "Address: 0x" << hex <<  address <<   ", Set: 0x" << hex << i  << (Hit ? ", Hit" : ", Miss") << ", Tag: 0x" << hex << tag <<( blocks[i].get_dirty() ? ", Dirty" : ", Clean" ) << endl;
+                temp = out.str();
+                output += temp;
                 return;
             }
         }
@@ -242,6 +254,11 @@ void cache::load_memory(int address, size_t nbytes, char* memory, char* target) 
             else if (cache_config.get_replacement_policy() == "lru") {
                 lru_list.push_front(i);
             }
+            string temp;
+                ostringstream out(temp);
+                out << "R: " << "Address: 0x" << hex <<  address <<   ", Set: 0x" << hex << i  << (Hit ? ", Hit" : ", Miss") << ", Tag: 0x" << hex << tag <<( blocks[i].get_dirty() ? ", Dirty" : ", Clean" ) << endl;
+                temp = out.str();
+                output += temp;
             return;
     }
     if (associativity == 1) {
@@ -251,6 +268,7 @@ void cache::load_memory(int address, size_t nbytes, char* memory, char* target) 
         if (blocks[index].get_tag() == tag) {
             if (blocks[index].get_valid()) {
                 ++hits;
+                Hit = true;
                 for (size_t j=0; j<nbytes; j++) {
                     target[j] = blocks[index].get_data(offset + j);
                 }
@@ -265,6 +283,11 @@ void cache::load_memory(int address, size_t nbytes, char* memory, char* target) 
                     target[j] = blocks[index].get_data(offset + j);
                 }
             }
+            string temp;
+                ostringstream out(temp);
+                out << "R: " << "Address: 0x" << hex <<  address <<   ", Set: 0x" << hex << index  << (Hit ? ", Hit" : ", Miss") << ", Tag: 0x" << hex << tag <<( blocks[index].get_dirty() ? ", Dirty" : ", Clean" ) << endl;
+                temp = out.str();
+                output += temp;
             return;
         }
         //in case of cache miss. there is no need of replacement policy in case of direct mapped cache.
@@ -283,6 +306,11 @@ void cache::load_memory(int address, size_t nbytes, char* memory, char* target) 
         for (size_t j=0; j<nbytes; j++) {
             target[j] = blocks[index].get_data(offset + j);
         }
+        string temp;
+                ostringstream out(temp);
+                out << "R: " << "Address: 0x" << hex <<  address <<   ", Set: 0x" << hex << index  << (Hit ? ", Hit" : ", Miss") << ", Tag: 0x" << hex << tag <<( blocks[index].get_dirty() ? ", Dirty" : ", Clean" ) << endl;
+                temp = out.str();
+                output += temp;
         return;
     }
     if (associativity > 1) {
@@ -294,6 +322,7 @@ void cache::load_memory(int address, size_t nbytes, char* memory, char* target) 
             if (sets[index][i].get_tag() == tag) {
                 if (sets[index][i].get_valid()) {
                     ++hits;
+                    Hit = true;
                     for (size_t j=0; j<nbytes; j++) {
                         target[j] = sets[index][i].get_data(offset + j);
                     }
@@ -330,6 +359,11 @@ void cache::load_memory(int address, size_t nbytes, char* memory, char* target) 
                     }
                     lru_list_set[index].push_front(i);
                 }
+                string temp;
+                ostringstream out(temp);
+                out << "R: " << "Address: 0x" << hex <<  address <<   ", Set: 0x" << hex << index  << (Hit ? ", Hit" : ", Miss") << ", Tag: 0x" << hex << tag <<( blocks[index].get_dirty() ? ", Dirty" : ", Clean" ) << endl;
+                temp = out.str();
+                output += temp;
                 return;
             }
         }
@@ -380,6 +414,11 @@ void cache::load_memory(int address, size_t nbytes, char* memory, char* target) 
             else if (cache_config.get_replacement_policy() == "lru") {
                 lru_list_set[index].push_front(i);
             }
+            string temp;
+                ostringstream out(temp);
+                out << "R: " << "Address: 0x" << hex <<  address <<   ", Set: 0x" << hex << index  << (Hit ? ", Hit" : ", Miss") << ", Tag: 0x" << hex << tag <<( blocks[index].get_dirty() ? ", Dirty" : ", Clean" ) << endl;
+                temp = out.str();
+                output += temp;
             return;
     }
 }
@@ -391,6 +430,7 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
     unsigned int num_blocks = cache_size / block_size;
     unsigned int offset_bits = log2(block_size);
     unsigned int offset= address & ((1 << offset_bits) - 1);
+    bool Hit = false;
     if (offset + nbytes > block_size) {
         cerr << "Error: Address out of bounds" << endl;
         exit(1);
@@ -402,6 +442,7 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
             if (blocks[i].get_tag() == tag) {
                 if (blocks[i].get_valid()) {
                     ++hits;
+                    Hit = true;
                     if (cache_config.get_write_policy() == "wb") {
                         for (size_t j=0; j<nbytes; j++) {
                             blocks[i].set_data(source[j], offset + j);
@@ -461,6 +502,11 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
                     }
                     lru_list.push_front(i);
                 }
+                string temp;
+                ostringstream out(temp);
+                out << "W: " << "Address: 0x" << hex <<  address <<   ", Set: 0x" << hex << i  << (Hit ? ", Hit" : ", Miss") << ", Tag: 0x" << hex << tag <<( blocks[i].get_dirty() ? ", Dirty" : ", Clean" ) << endl;
+                temp = out.str();
+                output += temp;
                 return;
             }
         }
@@ -521,6 +567,11 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
                 memory[address - offset + j] = source[j];
             }
             }
+            string temp;
+                ostringstream out(temp);
+                out << "W: " << "Address: 0x" << hex <<  address <<   ", Set: 0x" << hex << i  << (Hit ? ", Hit" : ", Miss") << ", Tag: 0x" << hex << tag <<( blocks[i].get_dirty() ? ", Dirty" : ", Clean" ) << endl;
+                temp = out.str();               
+                output += temp;
            return;
     }
     if (associativity == 1) {
@@ -530,6 +581,7 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
         if (blocks[index].get_tag() == tag) {
             if (blocks[index].get_valid()) {
                 ++hits;
+                Hit = true;
                 if (cache_config.get_write_policy() == "wb") {
                     for (size_t j=0; j<nbytes; j++) {
                         blocks[index].set_data(source[j], offset + j);
@@ -571,6 +623,11 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
                 }
                 }
             }
+            string temp;
+                ostringstream out(temp);
+                out << "W: " << "Address: 0x" << hex <<  address <<   ", Set: 0x" << hex << index  << (Hit ? ", Hit" : ", Miss") << ", Tag: 0x" << hex << tag <<( blocks[index].get_dirty() ? ", Dirty" : ", Clean" ) << endl;
+                temp = out.str();
+                output += temp;
             return;
         }
         //in case of cache miss. there is no need of replacement policy in case of direct mapped cache.
@@ -597,6 +654,11 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
             memory[address - offset + j] = source[j];
         }
         }
+        string temp;
+                ostringstream out(temp);
+                out << "W: " << "Address: 0x" << hex <<  address <<   ", Set: 0x" << hex << index  << (Hit ? ", Hit" : ", Miss") << ", Tag: 0x" << hex << tag <<( blocks[index].get_dirty() ? ", Dirty" : ", Clean" ) << endl;
+                temp = out.str();
+                output += temp;
         return;
     }
     if (associativity > 1) {
@@ -608,6 +670,7 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
             if (sets[index][i].get_tag() == tag) {
                 if (sets[index][i].get_valid()) {
                     ++hits;
+                    Hit = true;
                     if (cache_config.get_write_policy() == "wb") {
                         for (size_t j=0; j<nbytes; j++) {
                             sets[index][i].set_data(source[j], offset + j);
@@ -671,6 +734,11 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
                     }
                     lru_list_set[index].push_front(i);
                 }
+                string temp;
+                ostringstream out(temp);
+                out << "W: " << "Address: 0x" << hex <<  address <<   ", Set: 0x" << hex << index  << (Hit ? ", Hit" : ", Miss") << ", Tag: 0x" << hex << tag <<( blocks[index].get_dirty() ? ", Dirty" : ", Clean" ) << endl;
+                temp = out.str();
+                output += temp;
                 return;
             }
         }
@@ -729,6 +797,11 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
                 memory[address - offset + j] = source[j];
             }
             }
+            string temp;
+                ostringstream out(temp);
+                out << "w: " << "Address: 0x" << hex <<  address <<   ", Set: 0x" << hex << index  << (Hit ? ", Hit" : ", Miss") << ", Tag: 0x" << hex << tag <<( blocks[index].get_dirty() ? ", Dirty" : ", Clean" ) << endl;
+                temp = out.str();
+                output += temp;
             return;
     }
 }
@@ -740,14 +813,14 @@ void cache::dump(string filename) {
     if (associativity <= 1) {
         for (size_t i =0; i < blocks.size(); i++) {
             if (blocks[i].get_valid()) {
-                output_file << "Set: 0x" << hex << i << "," << "Tag: 0x" << blocks[i].get_tag() << "," << (blocks[i].get_dirty() ? "Dirty" : "Clean") << endl;
+                output_file << "Set: 0x" << hex << i << "," << "Tag: 0x" << blocks[i].get_tag() << "," << (blocks[i].get_dirty() ? ", Dirty" : ", Clean") << endl;
             }
         }
     } else {
         for (size_t i = 0; i < sets.size(); i++) {
             for (size_t j = 0; j < associativity; j++) {
                 if (sets[i][j].get_valid()) {
-                    output_file << "Set: 0x" << hex << i << "," << "Tag: 0x" << sets[i][j].get_tag() << "," << (sets[i][j].get_dirty() ? "Dirty" : "Clean") << endl;
+                    output_file << "Set: 0x" << hex << i << "," << "Tag: 0x" << sets[i][j].get_tag() << "," << (sets[i][j].get_dirty() ? ", Dirty" : ", Clean") << endl;
                 }
             }
         }

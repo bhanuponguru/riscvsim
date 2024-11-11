@@ -64,4 +64,6 @@ int get_hits();
 void clear_cache(bool invalidate = false);
 void dump(string filename);
 config get_config();
+string output;
+string get_output();
 };
