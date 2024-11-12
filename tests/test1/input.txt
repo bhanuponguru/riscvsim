@@ -1,6 +1,5 @@
-cache-sim enable tests/test1/config.txt
-load tests/test1/test.s
+cache_sim enable tests/test1/config.txt
+load tests/test1/input1.s
 run
-cache-sim status
-cache-sim stats
+cache_sim dump tests/test1/filename.ext
 exit

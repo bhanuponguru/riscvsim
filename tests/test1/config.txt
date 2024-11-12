@@ -1,5 +1,5 @@
 256
 16
 1
-fifo
-wt
+LRU
+WB

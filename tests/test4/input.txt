@@ -1,0 +1,5 @@
+cache_sim enable tests/test4/config.txt
+load tests/test4/input4.s
+run
+cache_sim dump tests/test4/filename.ext
+exit

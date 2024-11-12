@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
             call_stack.push_back(call_item("main",0));
             executing=false;
             if (cache_enabled) {
-                cache_memory.clear_cache();
+                cache_memory.clear_cache(mem);
             }
         }
         else if (command == "cache_sim") {
@@ -104,7 +104,7 @@ int main(int argc, char *argv[]) {
                     }
                 } 
                 else if (cmd == "invalidate") {
-                    cache_memory.clear_cache(true);
+                    cache_memory.clear_cache(mem, true);
                 }
                 else if (cmd == "dump") {
                     string myFile;

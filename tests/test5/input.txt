@@ -1,0 +1,5 @@
+cache enable tests/test5/config.txt
+load tests/test5/input5.s
+run
+cache dump tests/test5/output.txt
+exit

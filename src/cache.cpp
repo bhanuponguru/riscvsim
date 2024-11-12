@@ -361,7 +361,7 @@ void cache::load_memory(int address, size_t nbytes, char* memory, char* target) 
                 }
                 string temp;
                 ostringstream out(temp);
-                out << "R: " << "Address: 0x" << hex <<  address <<   ", Set: 0x" << hex << index  << (Hit ? ", Hit" : ", Miss") << ", Tag: 0x" << hex << tag <<( blocks[index].get_dirty() ? ", Dirty" : ", Clean" ) << endl;
+                out << "R: " << "Address: 0x" << hex <<  address <<   ", Set: 0x" << hex << index  << (Hit ? ", Hit" : ", Miss") << ", Tag: 0x" << hex << tag <<( sets[index][i].get_dirty() ? ", Dirty" : ", Clean" ) << endl;
                 temp = out.str();
                 output += temp;
                 return;
@@ -416,7 +416,7 @@ void cache::load_memory(int address, size_t nbytes, char* memory, char* target) 
             }
             string temp;
                 ostringstream out(temp);
-                out << "R: " << "Address: 0x" << hex <<  address <<   ", Set: 0x" << hex << index  << (Hit ? ", Hit" : ", Miss") << ", Tag: 0x" << hex << tag <<( blocks[index].get_dirty() ? ", Dirty" : ", Clean" ) << endl;
+                out << "R: " << "Address: 0x" << hex <<  address <<   ", Set: 0x" << hex << index  << (Hit ? ", Hit" : ", Miss") << ", Tag: 0x" << hex << tag <<( sets[index][i].get_dirty() ? ", Dirty" : ", Clean" ) << endl;
                 temp = out.str();
                 output += temp;
             return;
@@ -736,7 +736,7 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
                 }
                 string temp;
                 ostringstream out(temp);
-                out << "W: " << "Address: 0x" << hex <<  address <<   ", Set: 0x" << hex << index  << (Hit ? ", Hit" : ", Miss") << ", Tag: 0x" << hex << tag <<( blocks[index].get_dirty() ? ", Dirty" : ", Clean" ) << endl;
+                out << "W: " << "Address: 0x" << hex <<  address <<   ", Set: 0x" << hex << index  << (Hit ? ", Hit" : ", Miss") << ", Tag: 0x" << hex << tag <<( sets[index][i].get_dirty() ? ", Dirty" : ", Clean" ) << endl;
                 temp = out.str();
                 output += temp;
                 return;
@@ -799,7 +799,7 @@ void cache::store_memory(int address, size_t nbytes, char* memory, char* source)
             }
             string temp;
                 ostringstream out(temp);
-                out << "w: " << "Address: 0x" << hex <<  address <<   ", Set: 0x" << hex << index  << (Hit ? ", Hit" : ", Miss") << ", Tag: 0x" << hex << tag <<( blocks[index].get_dirty() ? ", Dirty" : ", Clean" ) << endl;
+                out << "w: " << "Address: 0x" << hex <<  address <<   ", Set: 0x" << hex << index  << (Hit ? ", Hit" : ", Miss") << ", Tag: 0x" << hex << tag <<( sets[index][i].get_dirty() ? ", Dirty" : ", Clean" ) << endl;
                 temp = out.str();
                 output += temp;
             return;
@@ -813,14 +813,14 @@ void cache::dump(string filename) {
     if (associativity <= 1) {
         for (size_t i =0; i < blocks.size(); i++) {
             if (blocks[i].get_valid()) {
-                output_file << "Set: 0x" << hex << i << "," << "Tag: 0x" << blocks[i].get_tag() << "," << (blocks[i].get_dirty() ? ", Dirty" : ", Clean") << endl;
+                output_file << "Set: 0x" << hex << i << "," << "Tag: 0x" << blocks[i].get_tag() << "," << (blocks[i].get_dirty() ? " Dirty" : " Clean") << endl;
             }
         }
     } else {
         for (size_t i = 0; i < sets.size(); i++) {
             for (size_t j = 0; j < associativity; j++) {
                 if (sets[i][j].get_valid()) {
-                    output_file << "Set: 0x" << hex << i << "," << "Tag: 0x" << sets[i][j].get_tag() << "," << (sets[i][j].get_dirty() ? ", Dirty" : ", Clean") << endl;
+                    output_file << "Set: 0x" << hex << i << "," << "Tag: 0x" << sets[i][j].get_tag() << "," << (sets[i][j].get_dirty() ? " Dirty" : " Clean") << endl;
                 }
             }
         }
@@ -828,20 +828,38 @@ void cache::dump(string filename) {
     output_file.close();
 }
 
-void cache::clear_cache(bool invalidate) {
+void cache::clear_cache(char* mem, bool invalidate) {
     unsigned int block_size = cache_config.get_block_size();
     unsigned int cache_size = cache_config.get_cache_size();
     unsigned int associativity = cache_config.get_associativity();
     unsigned int num_blocks = cache_size / block_size;
     if (associativity == 0) {
+        unsigned int offset_bits = log2(block_size);
         for (size_t i=0; i<num_blocks; i++) {
+            if (blocks[i].get_dirty()) {
+                //we wont have index bits in this case.
+                for (size_t j=0; j<block_size; j++) {
+                    //get address.
+                    int address = (blocks[i].get_tag() << offset_bits) + j;
+                    mem[address] = blocks[i].get_data(j);
+                }
+            }
             blocks[i].set_valid(false);
             blocks[i].set_dirty(false);
             blocks[i].set_tag(0);
         }
     }
     if (associativity == 1) {
+        unsigned int offset_bits = log2(block_size);
+        unsigned int index_bits = log2(num_blocks);
         for (size_t i=0; i<num_blocks; i++) {
+            if (blocks[i].get_dirty()) {
+                //in this case we also have index bits.
+                for (size_t j=0; j<block_size; j++) {
+                    int address = (blocks[i].get_tag() << (offset_bits + index_bits)) + (i << offset_bits) + j;
+                    mem[address] = blocks[i].get_data(j);
+                }
+            }
             blocks[i].set_valid(false);
             blocks[i].set_dirty(false);
             blocks[i].set_tag(0);
@@ -849,8 +867,16 @@ void cache::clear_cache(bool invalidate) {
     }
     if (associativity > 1) {
     unsigned int num_sets = num_blocks / associativity;
+    unsigned int offset_bits = log2(block_size);
+    unsigned int index_bits = log2(num_sets);
         for (size_t i=0; i<num_sets; i++) {
             for (size_t j=0; j<associativity; j++) {
+                if (sets[i][j].get_dirty()) {
+                    for (size_t k=0; k<block_size; k++) {
+                        int address = (sets[i][j].get_tag() << (offset_bits + index_bits)) + (i << offset_bits) + k;
+                        mem[address] = sets[i][j].get_data(k);
+                    }
+                }
                 sets[i][j].set_valid(false);
                 sets[i][j].set_dirty(false);
                 sets[i][j].set_tag(0);
