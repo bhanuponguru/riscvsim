@@ -813,14 +813,14 @@ void cache::dump(string filename) {
     if (associativity <= 1) {
         for (size_t i =0; i < blocks.size(); i++) {
             if (blocks[i].get_valid()) {
-                output_file << "Set: 0x" << hex << i << "," << "Tag: 0x" << blocks[i].get_tag() << "," << (blocks[i].get_dirty() ? " Dirty" : " Clean") << endl;
+                output_file << "Set: 0x" << hex << i << ", " << "Tag: 0x" << blocks[i].get_tag() << "," << (blocks[i].get_dirty() ? " Dirty" : " Clean") << endl;
             }
         }
     } else {
         for (size_t i = 0; i < sets.size(); i++) {
             for (size_t j = 0; j < associativity; j++) {
                 if (sets[i][j].get_valid()) {
-                    output_file << "Set: 0x" << hex << i << "," << "Tag: 0x" << sets[i][j].get_tag() << "," << (sets[i][j].get_dirty() ? " Dirty" : " Clean") << endl;
+                    output_file << "Set: 0x" << hex << i << ", " << "Tag: 0x" << sets[i][j].get_tag() << "," << (sets[i][j].get_dirty() ? " Dirty" : " Clean") << endl;
                 }
             }
         }

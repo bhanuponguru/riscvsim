@@ -1,0 +1,13 @@
+Cache enabled
+
+
+Executed lui x3, 0x10; PC=0x00000000
+Executed ld x4, 0(x3); PC=0x00000004
+Executed ld x4, 8(x3); PC=0x00000008
+Executed ld x4, 16(x3); PC=0x0000000c
+Executed ld x4, 24(x3); PC=0x00000010
+Executed ld x4, 32(x3); PC=0x00000014
+ D-cache statistics: Accesses= 5, Hit=2, Miss=3, Hit Rate=0.4
+
+
+Exited the Simulator

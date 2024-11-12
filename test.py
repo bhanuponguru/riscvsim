@@ -2,6 +2,8 @@ import subprocess
 import os
 
 def test():
+    count=0
+    total=0
     for i in range(1,3):
         inp=open(f"tests/test{i}/input.txt","r")
         out=open(f"tests/test{i}/output.txt","w")
@@ -17,7 +19,6 @@ def test():
         output=input_output.read()
         expected_input_output.close()
         input_output.close()
-
         if expected_output!=output:
             passed=False
             print(f"Test {i} failed")
@@ -34,6 +35,20 @@ def test():
             print(f"Test {i} failed")
             print(f"Expected dump: {expected_dump}")
             print(f"Dump: {dump}")
+        expected_output_file=open(f"tests/test{i}/expected_output.txt","r")
+        output_file=open(f"tests/test{i}/output.txt","r")
+        expected_output=expected_output_file.read()
+        output=output_file.read()
+        expected_output_file.close()
+        output_file.close()
+        if expected_output!=output:
+            passed=False
+            print(f"Test {i} failed")
+            print(f"Expected output: {expected_output}")
+            print(f"Output: {output}")
+        if passed: count+=1
+        total+=1
+    print(f"Tests passed: {count}/{total}")
 
 def main():
     test()
