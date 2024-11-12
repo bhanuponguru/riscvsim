@@ -4,7 +4,7 @@ import os
 def test():
     count=0
     total=0
-    for i in range(1,3):
+    for i, test in enumerate(os.listdir("tests"),1):
         inp=open(f"tests/test{i}/input.txt","r")
         out=open(f"tests/test{i}/output.txt","w")
         error=open(f"tests/test{i}/error.log","w")
