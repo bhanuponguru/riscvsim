@@ -1,5 +1,0 @@
-cache_sim enable tests/test3/config.txt
-load tests/test3/input3.s
-run
-cache_sim dump tests/test3/filename.ext
-exit
